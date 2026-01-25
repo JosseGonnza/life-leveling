@@ -3,12 +3,13 @@ package com.lifeleveling.domain.player;
 public enum HPState {
 
     /*
-     * Estado SALUDABLE: HP entre 50 y 100
-     *   XP Multiplier: 1.0x (100%)
-     *   Gold Multiplier: 1.0x (100%)
-     *   Restricciones: Ninguna
+     * Estado CRÍTICO: HP = 0 (BURNOUT)
+     *   XP Multiplier: 0.0x (0%) - No se gana XP
+     *   Gold Multiplier: 0.0x (0%) - No se gana Gold
+     *   Restricciones: LOCKDOWN total. Solo Daily Quests Rango E/D permitidas
+     *   Penalización: -10% del Oro total + Bloqueo de 24 horas
     */
-    HEALTHY(50, 100, 1.0, 1.0),
+    CRITICAL(0, 0, 0.0, 0.0),
     /*
      * Estado CANSADO: HP entre 1 y 49
      *   XP Multiplier: 0.5x (50%)
@@ -17,13 +18,13 @@ public enum HPState {
     */
     TIRED(1, 49, 0.5, 1.0),
     /*
-     * Estado CRÍTICO: HP = 0 (BURNOUT)
-     *   XP Multiplier: 0.0x (0%) - No se gana XP
-     *   Gold Multiplier: 0.0x (0%) - No se gana Gold
-     *   Restricciones: LOCKDOWN total. Solo Daily Quests Rango E/D permitidas
-     *   Penalización: -10% del Oro total + Bloqueo de 24 horas
+     * Estado SALUDABLE: HP entre 50 y 100
+     *   XP Multiplier: 1.0x (100%)
+     *   Gold Multiplier: 1.0x (100%)
+     *   Restricciones: Ninguna
     */
-    CRITICAL(0, 0, 0.0, 0.0);
+    HEALTHY(50, 100, 1.0, 1.0);
+
 
     private final int minHP;
     private final int maxHP;
