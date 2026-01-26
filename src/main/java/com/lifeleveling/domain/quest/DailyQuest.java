@@ -73,16 +73,19 @@ public final class DailyQuest implements Quest {
             throw new IllegalArgumentException("La fecha de creación no puede ser null");
         }
 
-        // Validación de coherencia de input según tipo
-        if (type.requiresBooleanInput() && booleanInput == null && status.isTerminal()) {
-            throw new IllegalArgumentException(
-                    String.format("%s requiere input Boolean", type)
-            );
-        }
-        if (type.requiresNumericInput() && integerInput == null && status.isTerminal()) {
-            throw new IllegalArgumentException(
-                    String.format("%s requiere input Integer", type)
-            );
+        // IMPORTANTE: Solo validar input si el estado es COMPLETED
+        // Si está FAILED o PENDING, el input puede ser null
+        if (status == QuestStatus.COMPLETED) {
+            if (type.requiresBooleanInput() && booleanInput == null) {
+                throw new IllegalArgumentException(
+                        String.format("%s requiere input Boolean", type)
+                );
+            }
+            if (type.requiresNumericInput() && integerInput == null) {
+                throw new IllegalArgumentException(
+                        String.format("%s requiere input Integer", type)
+                );
+            }
         }
 
         // Validación de streaks
@@ -225,6 +228,9 @@ public final class DailyQuest implements Quest {
 
     @Override
     public DailyQuest fail(Instant failedAt) {
+        if (failedAt == null) {
+            throw new IllegalArgumentException("El timestamp de fallo no puede ser null");
+        }
         if (!status.canTransitionTo(QuestStatus.FAILED)) {
             throw new IllegalStateException(
                     String.format("No se puede fallar una quest en estado %s", status)
@@ -237,10 +243,10 @@ public final class DailyQuest implements Quest {
                 questDate,
                 QuestStatus.FAILED,
                 createdAt,
-                null,
-                booleanInput,
-                integerInput,
-                0,  // Racha se resetea
+                null,  // No hay completedAt
+                null,  // No hay booleanInput (se falló)
+                null,  // No hay integerInput (se falló)
+                0,     // Racha se resetea
                 bestStreak  // Best streak se mantiene
         );
     }

@@ -218,23 +218,77 @@ class DailyQuestTest {
         @Test
         @DisplayName("isNewStreakRecord() detecta nuevo récord correctamente")
         void whenCheckingNewRecord_thenCorrectResult() {
-            DailyQuest normalQuest = DailyQuest.createWithStreak(
+            // Crear quest con racha 5/10 (no es récord)
+            DailyQuest quest1 = DailyQuest.createWithStreak(
                     DailyQuestType.GYM,
                     LocalDate.now(),
                     5,
                     10
             );
+            assertFalse(quest1.isNewStreakRecord(), "5/10 no es récord");
 
-            assertFalse(normalQuest.isNewStreakRecord());
+            // Completar: ahora tiene 6/10 (tampoco es récord)
+            DailyQuest quest2 = quest1.completeWithInput(true, Instant.now());
+            assertEquals(6, quest2.getCurrentStreak());
+            assertEquals(10, quest2.getBestStreak());
+            assertFalse(quest2.isNewStreakRecord(), "6/10 no es récord");
 
-            DailyQuest recordQuest = normalQuest.completeWithInput(true, Instant.now());
-            recordQuest = recordQuest.completeWithInput(true, Instant.now()); // 7
-            recordQuest = recordQuest.completeWithInput(true, Instant.now()); // 8
-            recordQuest = recordQuest.completeWithInput(true, Instant.now()); // 9
-            recordQuest = recordQuest.completeWithInput(true, Instant.now()); // 10
-            recordQuest = recordQuest.completeWithInput(true, Instant.now()); // 11 (nuevo récord)
+            // DÍA 2: streak 7/10
+            DailyQuest day2 = DailyQuest.createWithStreak(
+                    DailyQuestType.GYM,
+                    LocalDate.now().plusDays(1),
+                    6,  // Heredamos la racha del día anterior
+                    10
+            );
+            day2 = day2.completeWithInput(true, Instant.now());
+            assertEquals(7, day2.getCurrentStreak());
+            assertFalse(day2.isNewStreakRecord());
 
-            assertTrue(recordQuest.isNewStreakRecord());
+            // DÍA 3: streak 8/10
+            DailyQuest day3 = DailyQuest.createWithStreak(
+                    DailyQuestType.GYM,
+                    LocalDate.now().plusDays(2),
+                    7,
+                    10
+            );
+            day3 = day3.completeWithInput(true, Instant.now());
+            assertEquals(8, day3.getCurrentStreak());
+            assertFalse(day3.isNewStreakRecord());
+
+            // DÍA 4: streak 9/10
+            DailyQuest day4 = DailyQuest.createWithStreak(
+                    DailyQuestType.GYM,
+                    LocalDate.now().plusDays(3),
+                    8,
+                    10
+            );
+            day4 = day4.completeWithInput(true, Instant.now());
+            assertEquals(9, day4.getCurrentStreak());
+            assertFalse(day4.isNewStreakRecord());
+
+            // DÍA 5: streak 10/10 (EMPATE, no nuevo récord)
+            DailyQuest day5 = DailyQuest.createWithStreak(
+                    DailyQuestType.GYM,
+                    LocalDate.now().plusDays(4),
+                    9,
+                    10
+            );
+            day5 = day5.completeWithInput(true, Instant.now());
+            assertEquals(10, day5.getCurrentStreak());
+            assertEquals(10, day5.getBestStreak());
+            assertTrue(day5.isNewStreakRecord(), "10/10 es récord (empate)");
+
+            // DÍA 6: streak 11/11 (¡NUEVO RÉCORD!)
+            DailyQuest day6 = DailyQuest.createWithStreak(
+                    DailyQuestType.GYM,
+                    LocalDate.now().plusDays(5),
+                    10,
+                    10
+            );
+            day6 = day6.completeWithInput(true, Instant.now());
+            assertEquals(11, day6.getCurrentStreak());
+            assertEquals(11, day6.getBestStreak());
+            assertTrue(day6.isNewStreakRecord(), "11/11 es NUEVO récord");
         }
     }
 

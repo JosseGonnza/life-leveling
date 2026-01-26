@@ -6,16 +6,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 
-/*
- * Mecánicas:
- *   - Stat XP: XP específica de atributos (STR, INT, WIS, DIS, CHA)
- *   - General XP: XP del nivel general del jugador (ratio 1:1 con Stat XP)
- *   - Gold: Moneda del juego
- *
- * IMPORTANTE: Sistema Dual de XP
- *   Cuando se gana Stat XP, se suma AUTOMÁTICAMENTE a General XP
- *   Ejemplo: +50 INT XP → +50 a Inteligencia Y +50 a Nivel General
-*/
 public record QuestReward(
         Map<StatType, Integer> statXP,
         int generalXP,
@@ -36,11 +26,10 @@ public record QuestReward(
                                     entry.getKey(), entry.getValue())
                     );
                 }
-                Map<StatType, Integer> copy = new EnumMap<>(StatType.class); // Usar .class
-                copy.putAll(statXP);
-                statXP = Collections.unmodifiableMap(copy);
             }
-            statXP = Collections.unmodifiableMap(new EnumMap<>(statXP));
+            Map<StatType, Integer> copy = new EnumMap<>(StatType.class);
+            copy.putAll(statXP);
+            statXP = Collections.unmodifiableMap(copy);
         }
 
         if (generalXP < 0) {

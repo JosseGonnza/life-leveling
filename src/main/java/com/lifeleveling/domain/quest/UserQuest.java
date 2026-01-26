@@ -4,18 +4,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 
-/*
- * Características:
- *   - El usuario define: nombre, descripción, rango y deadline
- *   - Rango determina recompensas (XP/Gold) y penalización por fallo
- *   - Deadline opcional pero recomendada (crea urgencia)
- *   - Penalización: Si expira o falla → Daño HP basado en rango
- *
- * Filosofía:
- *   "Auto-responsabilidad gamificada"
- *   El jugador aprende a estimar dificultad y gestionar compromisos.
-*/
-
 public final class UserQuest implements Quest {
 
     private final QuestId id;
@@ -37,9 +25,10 @@ public final class UserQuest implements Quest {
             QuestStatus status,
             Instant createdAt,
             Instant completedAt,
-            Instant failedAt
+            Instant failedAt,
+            boolean skipDateValidation  // ✅ NUEVO PARÁMETRO
     ) {
-        validation(id, name, description, rank, deadline, status, createdAt, completedAt, failedAt);
+        validation(id, name, description, rank, deadline, status, createdAt, completedAt, failedAt, skipDateValidation);
 
         this.id = id;
         this.name = name.trim();
@@ -52,7 +41,18 @@ public final class UserQuest implements Quest {
         this.failedAt = failedAt;
     }
 
-    private static void validation(QuestId id, String name, String description, QuestRank rank, LocalDate deadline, QuestStatus status, Instant createdAt, Instant completedAt, Instant failedAt) {
+    private static void validation(
+            QuestId id,
+            String name,
+            String description,
+            QuestRank rank,
+            LocalDate deadline,
+            QuestStatus status,
+            Instant createdAt,
+            Instant completedAt,
+            Instant failedAt,
+            boolean skipDateValidation  // ✅ NUEVO PARÁMETRO
+    ) {
         if (id == null) {
             throw new IllegalArgumentException("El ID no puede ser null");
         }
@@ -72,14 +72,15 @@ public final class UserQuest implements Quest {
             throw new IllegalArgumentException("La fecha de creación no puede ser null");
         }
 
-        // Validación de deadline en el pasado
-        if (deadline != null && deadline.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException(
-                    String.format("La deadline no puede estar en el pasado: %s", deadline)
-            );
+        if (!skipDateValidation) {
+            // Validación de deadline en el pasado (solo en create())
+            if (deadline != null && deadline.isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException(
+                        String.format("La deadline no puede estar en el pasado: %s", deadline)
+                );
+            }
         }
 
-        // Validación de timestamps de completado/fallo
         if (completedAt != null && completedAt.isBefore(createdAt)) {
             throw new IllegalArgumentException(
                     "La fecha de completado no puede ser anterior a la de creación"
@@ -91,7 +92,6 @@ public final class UserQuest implements Quest {
             );
         }
 
-        // Validación de coherencia de estado
         if (status == QuestStatus.COMPLETED && completedAt == null) {
             throw new IllegalArgumentException(
                     "Una quest COMPLETED debe tener completedAt"
@@ -119,7 +119,8 @@ public final class UserQuest implements Quest {
                 QuestStatus.PENDING,
                 Instant.now(),
                 null,
-                null
+                null,
+                false  // ✅ NO skip validación = validar fechas
         );
     }
 
@@ -137,10 +138,12 @@ public final class UserQuest implements Quest {
                 QuestStatus.PENDING,
                 Instant.now(),
                 null,
-                null
+                null,
+                false  // ✅ NO skip validación
         );
     }
 
+    // ✅ reconstitute() pasa true para SKIP validación de fechas
     public static UserQuest reconstitute(
             QuestId id,
             String name,
@@ -161,7 +164,8 @@ public final class UserQuest implements Quest {
                 status,
                 createdAt,
                 completedAt,
-                failedAt
+                failedAt,
+                true  // ✅ SÍ skip validación = permite fechas pasadas
         );
     }
 
@@ -197,7 +201,6 @@ public final class UserQuest implements Quest {
 
     @Override
     public QuestReward reward() {
-        // Las UserQuests dan XP/Gold basado en el rango
         return QuestReward.fromRank(rank);
     }
 
@@ -221,7 +224,8 @@ public final class UserQuest implements Quest {
                 QuestStatus.COMPLETED,
                 createdAt,
                 completedAt,
-                null
+                null,
+                true  // ✅ Skip validación en transiciones de estado
         );
     }
 
@@ -245,7 +249,8 @@ public final class UserQuest implements Quest {
                 QuestStatus.FAILED,
                 createdAt,
                 null,
-                failedAt
+                failedAt,
+                true  // ✅ Skip validación
         );
     }
 
@@ -273,7 +278,8 @@ public final class UserQuest implements Quest {
                 QuestStatus.EXPIRED,
                 createdAt,
                 null,
-                expiredAt
+                expiredAt,
+                true  // ✅ Skip validación
         );
     }
 
@@ -293,7 +299,8 @@ public final class UserQuest implements Quest {
                 QuestStatus.IN_PROGRESS,
                 createdAt,
                 null,
-                null
+                null,
+                true  // ✅ Skip validación
         );
     }
 

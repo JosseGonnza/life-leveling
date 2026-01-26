@@ -146,8 +146,8 @@ public enum SystemQuestType {
             40,
             GATE_C_TO_B_PHASE_2,
             QuestRank.A,
-            0,
-            0  // No da XP/Gold, da título
+            2_000,
+            5_000
     ),
 
     /**
@@ -258,8 +258,8 @@ public enum SystemQuestType {
             0,  // Sin requisito de nivel
             null,  // Sin gate anterior (se triggerea por evento)
             QuestRank.B,
-            0,
-            0
+            1_000,
+            2_000
     ),
 
     /**
@@ -288,10 +288,6 @@ public enum SystemQuestType {
             500_000
     ),
     ;
-
-    // ========================================================================================
-    // CAMPOS
-    // ========================================================================================
 
     private final String icon;
     private final String name;
@@ -322,48 +318,26 @@ public enum SystemQuestType {
         this.baseGold = baseGold;
     }
 
-    // ========================================================================================
-    // QUERIES
-    // ========================================================================================
-
-    /**
-     * Verifica si es la primera gate (no requiere gate anterior).
-     */
     public boolean isFirstGate() {
         return previousGate == null;
     }
 
-    /**
-     * Verifica si tiene una gate anterior requerida.
-     */
     public boolean hasPreviousGate() {
         return previousGate != null;
     }
 
-    /**
-     * Verifica si es una gate especial (triggered por evento).
-     */
     public boolean isSpecialGate() {
         return this == GATE_REDEMPTION;
     }
 
-    /**
-     * Verifica si es la gate final (endgame).
-     */
     public boolean isEndgame() {
         return this == GATE_ENDGAME;
     }
 
-    /**
-     * Verifica si el jugador cumple los requisitos de nivel.
-     */
     public boolean meetsLevelRequirement(int playerLevel) {
         return playerLevel >= levelRequirement;
     }
 
-    /**
-     * Obtiene la recompensa base (sin buffs).
-     */
     public QuestReward getBaseReward() {
         return QuestReward.builder()
                 .setGeneralXP(baseXP)
@@ -371,17 +345,9 @@ public enum SystemQuestType {
                 .build();
     }
 
-    // ========================================================================================
-    // UI FORMAT
-    // ========================================================================================
-
     public String toDisplayString() {
         return icon + " " + name;
     }
-
-    // ========================================================================================
-    // GETTERS
-    // ========================================================================================
 
     public String getIcon() {
         return icon;
