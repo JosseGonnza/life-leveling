@@ -145,6 +145,19 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
         return new Stat(type, newLevel, newXP);
     }
 
+    /**
+     * Crea un nuevo Stat con niveles extra (Buffs de equipo).
+     * NO modifica la XP, solo el nivel efectivo.
+     * Respeta el Hard Cap de 100.
+     */
+    public Stat boost(int bonusLevels) {
+        if (bonusLevels == 0) return this;
+        // Calculamos nuevo nivel, capado a 100 (o podríamos permitir >100 para stats "divinos" en el futuro)
+        // De momento respetamos el MAX_LEVEL del juego
+        int boostedLevel = Math.min(MAX_LEVEL, currentLevel + bonusLevels);
+        return new Stat(type, boostedLevel, currentXP);
+    }
+
     public Stat reset() {
         return initial(type);
     }

@@ -201,6 +201,24 @@ public record Stats(
         };
     }
 
+    /**
+     * Aplica bonificadores de equipamiento o temporales.
+     * Devuelve una nueva instancia con los niveles aumentados.
+     */
+    public Stats applyBonuses(Map<StatType, Integer> bonuses) {
+        if (bonuses == null || bonuses.isEmpty()) {
+            return this;
+        }
+
+        return new Stats(
+                strength.boost(bonuses.getOrDefault(StatType.STRENGTH, 0)),
+                intellect.boost(bonuses.getOrDefault(StatType.INTELLECT, 0)),
+                wisdom.boost(bonuses.getOrDefault(StatType.WISDOM, 0)),
+                discipline.boost(bonuses.getOrDefault(StatType.DISCIPLINE, 0)),
+                charisma.boost(bonuses.getOrDefault(StatType.CHARISMA, 0))
+        );
+    }
+
     public Stats reset() {
         return initial();
     }
