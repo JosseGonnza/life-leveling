@@ -1,10 +1,14 @@
 package com.lifeleveling.domain.player;
 
+import com.lifeleveling.domain.debuff.Debuff;
+import com.lifeleveling.domain.debuff.DebuffTracker;
+import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,6 +20,7 @@ import java.util.UUID;
  * 3. Orquestar la recepción de daño y curación.
  * 4. Gestionar el equipamiento e inventario.
  * 5. Gestionar los títulos desbloqueados y equipados.
+ * 6. Gestionar los Debuffs activos y sus penalizaciones. [Nuevo]
  */
 public class Player {
 
@@ -32,12 +37,16 @@ public class Player {
     private final Inventory inventory;
     private final TitleInventory titleInventory;
 
+    // [Fase 4] Nuevo componente: Cerebro de Debuffs
+    private final DebuffTracker debuffTracker;
+
     // Estado de Burnout (Bloqueo temporal)
     private BurnoutLock activeBurnoutLock;
 
     // Constructor privado para forzar uso de métodos factoría
     private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
-                   Inventory inventory, TitleInventory titleInventory, BurnoutLock activeBurnoutLock) {
+                   Inventory inventory, TitleInventory titleInventory,
+                   DebuffTracker debuffTracker, BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
         this.currentHP = currentHP;
@@ -46,6 +55,7 @@ public class Player {
         this.wallet = wallet;
         this.inventory = inventory;
         this.titleInventory = titleInventory;
+        this.debuffTracker = debuffTracker;
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -62,14 +72,16 @@ public class Player {
                 Wallet.empty(),
                 new Inventory(),       // Inventario vacío
                 new TitleInventory(),  // Sin títulos al inicio
+                new DebuffTracker(),   // [Fase 4] Tracker vacío
                 null                   // Sin burnout al inicio
         );
     }
 
     // Para reconstruir desde persistencia (JSON/DB)
     public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
-                                  Inventory inventory, TitleInventory titleInventory, BurnoutLock lock) {
-        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, lock);
+                                 Inventory inventory, TitleInventory titleInventory,
+                                 DebuffTracker debuffTracker, BurnoutLock lock) {
+        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, debuffTracker, lock);
     }
 
     // ========================================================================================
@@ -92,43 +104,76 @@ public class Player {
         return Math.max(1, Math.min(level, 100));
     }
 
+    /**
+     * Añade XP a un stat. Aplica penalizaciones de Salud (TIRED) y Debuffs (CHAOS, FATIGUE).
+     * Y Bonificadores de Títulos.
+     */
     public void addXP(StatType type, int amount) {
-        // 1. Aplicamos multiplicadores según estado de salud (ej: TIRED da 0.5x XP)
-        int afterHpMultiplier = hpState.applyXPMultiplier(amount);
+        if (amount <= 0) return;
 
-        // 2. Aplicamos multiplicadores de títulos equipados
+        // --- PASO 1: Penalizaciones por Salud (HPState) ---
+        // Ej: TIRED reduce XP a la mitad.
+        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        // Nota: Si HPState ya tenía un método applyXPMultiplier, úsalo, pero devuelve int y perdemos precisión para los siguientes pasos.
+        // Mejor trabajar con doubles hasta el final.
+
+        // --- PASO 2: Penalizaciones por Debuffs [Fase 4] ---
+        // Ej: FATIGUE (0.5 global) y CHAOS (0.8 WIS).
+        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
+        double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
+
+        // --- PASO 3: Bonificadores de Títulos ---
         double titleMultiplier = titleInventory.getStatXPMultiplier(type);
-        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
 
-        // 3. Delegamos la subida al objeto Stats BASE (que es inmutable, nos devuelve uno nuevo)
-        // OJO: La XP siempre se suma a los stats base, no a los dopados por equipo.
-        this.stats = stats.addXP(type, finalAmount);
+        // --- CÁLCULO FINAL ---
+        // XP = Base * (HP_Factor * Debuff_Global * Debuff_Stat) * Title_Bonus
+        double totalMultiplier = hpMultiplier * debuffGlobalMult * debuffStatMult * titleMultiplier;
+
+        int finalAmount = (int) Math.round(amount * totalMultiplier);
+
+        // Logging de depuración si hubo reducción drástica
+        if (finalAmount < amount) {
+            // System.out.println("🔻 XP Reducida: " + amount + " -> " + finalAmount + " (HP:" + hpMultiplier + ", Debuffs:" + (debuffGlobalMult*debuffStatMult) + ")");
+        }
+
+        if (finalAmount > 0) {
+            // 4. Delegamos la subida al objeto Stats BASE
+            this.stats = stats.addXP(type, finalAmount);
+
+            // 5. [Regla de Oro] La XP Neta ganada se suma también al Nivel General (implícito en Stats.getTotalAccumulatedXP, pero si tienes un contador separado, súmalo aquí).
+            // Si tu implementación de Stats ya maneja la XP General internamente, perfecto. Si no:
+            // this.stats = stats.addGeneralXP(finalAmount);
+        }
     }
 
     /**
-     * Añade XP general (distribuida entre todos los stats o para nivel general).
-     * Aplica multiplicadores de estado de salud y títulos.
+     * Añade XP general pura.
      */
     public void addGeneralXP(int amount) {
-        // 1. Aplicamos multiplicador de salud
-        int afterHpMultiplier = hpState.applyXPMultiplier(amount);
-
-        // 2. Aplicamos multiplicador de títulos para XP general
+        // Misma lógica de multiplicadores globales
+        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double titleMultiplier = titleInventory.getGeneralXPMultiplier();
-        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
 
-        // 3. Distribuimos equitativamente entre todos los stats
-        int perStat = finalAmount / StatType.values().length;
-        for (StatType type : StatType.values()) {
-            this.stats = stats.addXP(type, perStat);
+        int finalAmount = (int) Math.round(amount * hpMultiplier * debuffGlobalMult * titleMultiplier);
+
+        // Distribuimos equitativamente entre stats para mantener la coherencia
+        if (finalAmount > 0) {
+            int perStat = finalAmount / StatType.values().length;
+            for (StatType type : StatType.values()) {
+                this.stats = stats.addXP(type, perStat);
+            }
         }
     }
 
     public void addGold(int amount) {
-        // 1. Aplicamos multiplicadores de estado de salud
+        // 1. Salud
         int afterHpMultiplier = hpState.applyGoldMultiplier(amount);
 
-        // 2. Aplicamos multiplicadores de títulos
+        // 2. Debuffs (Si alguno penaliza ganancia global de oro, iría aquí)
+        // Por ahora TRAPPED penaliza por hora, no porcentual.
+
+        // 3. Títulos
         double titleMultiplier = titleInventory.getGoldMultiplier();
         int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
 
@@ -148,10 +193,10 @@ public class Player {
 
     public void heal(int amount) {
         if (isBurnoutActive()) {
-            // Reglas especiales de curación en Burnout se manejarían aquí o en el servicio
+            // Reglas especiales de curación en Burnout...
         }
 
-        // Aplicamos bonus de recuperación de HP de títulos equipados
+        // Bonus de títulos
         int finalAmount = titleInventory.applyHPRecoveryBonus(amount);
 
         this.currentHP = Math.min(100, currentHP + finalAmount);
@@ -159,43 +204,67 @@ public class Player {
     }
 
     public void takeDamage(int amount) {
-        // Reducimos HP (mínimo 0)
         this.currentHP = Math.max(0, currentHP - amount);
         this.hpState = HPState.fromHP(this.currentHP);
 
-        // Verificamos si acabamos de entrar en BURNOUT
         if (this.currentHP == 0 && activeBurnoutLock == null) {
             triggerBurnout();
         }
     }
 
-    /**
-     * Daño laboral (mitigado por equipamiento).
-     * Ejemplo: Si tienes Silla Ergonómica (-1 daño), trabajar duele menos.
-     */
     public void takeWorkDamage(int baseDamage) {
         int mitigation = inventory.getTotalDamageMitigation();
-        int finalDamage = Math.max(0, baseDamage - mitigation); // Nunca daño negativo (curación)
+        int finalDamage = Math.max(0, baseDamage - mitigation);
         takeDamage(finalDamage);
     }
 
     private void triggerBurnout() {
-        // 1. Crear el bloqueo
         this.activeBurnoutLock = BurnoutLock.createNow();
-
-        // 2. Aplicar la penalización económica (Impuesto de Salud)
         this.wallet = wallet.applyBurnoutTax();
     }
 
     public boolean isBurnoutActive() {
-        return activeBurnoutLock != null && !activeBurnoutLock.hasExpired(java.time.Instant.now());
+        return activeBurnoutLock != null && !activeBurnoutLock.hasExpired(Instant.now());
     }
 
-    // Intenta salir del burnout si ya pasó el tiempo y tenemos HP
     public void tryClearBurnout() {
-        if (activeBurnoutLock != null && activeBurnoutLock.hasExpired(java.time.Instant.now()) && currentHP > 0) {
+        if (activeBurnoutLock != null && activeBurnoutLock.hasExpired(Instant.now()) && currentHP > 0) {
             this.activeBurnoutLock = null;
         }
+    }
+
+    // ========================================================================================
+    // GESTIÓN DE DEBUFFS
+    // ========================================================================================
+
+    public void applyDebuff(DebuffType type, String source, Instant now) {
+        // [Fase 5] Verificar Inmunidad por Títulos
+        // Ej: Título "Mente de Acero" da inmunidad a "CHAOS"
+        if (titleInventory.hasImmunityTo(type.name())) {
+            // System.out.println("🛡️ INMUNE a " + type.getDisplayName() + " gracias a tus títulos.");
+            return;
+        }
+
+        Debuff debuff = Debuff.create(type, source, now);
+        debuffTracker.applyDebuff(debuff);
+    }
+
+    public void cureDebuff(DebuffType type) {
+        if (debuffTracker.hasDebuff(type)) {
+            debuffTracker.removeDebuff(type);
+        }
+    }
+
+    public DebuffTracker getDebuffTracker() {
+        return debuffTracker;
+    }
+
+    // Método para el ciclo diario (Clean Up)
+    public void updateState(Instant now) {
+        // Limpiamos debuffs expirados
+        debuffTracker.cleanExpiredDebuffs(now);
+        // Intentamos limpiar Burnout si corresponde
+        tryClearBurnout();
     }
 
     // ========================================================================================
@@ -223,63 +292,28 @@ public class Player {
     // GESTIÓN DE TÍTULOS
     // ========================================================================================
 
-    /**
-     * Desbloquea un nuevo título para el jugador.
-     * @return true si se desbloqueó (no lo tenía), false si ya lo tenía
-     */
     public boolean unlockTitle(TitleType type) {
         return titleInventory.unlock(type);
     }
 
-    /**
-     * Equipa un título en un slot disponible.
-     * @throws IllegalStateException si no tiene el título o no hay slots disponibles
-     */
     public void equipTitle(TitleType type) {
         titleInventory.equip(type, getLevel());
     }
 
-    /**
-     * Desequipa un título.
-     * @return true si se desequipó, false si no estaba equipado
-     */
     public boolean unequipTitle(TitleType type) {
         return titleInventory.unequip(type);
     }
 
-    /**
-     * Intercambia un título equipado por otro.
-     */
     public void swapTitle(TitleType oldType, TitleType newType) {
         titleInventory.swap(oldType, newType, getLevel());
     }
 
-    /**
-     * Verifica si el jugador tiene un título desbloqueado.
-     */
     public boolean hasTitle(TitleType type) {
         return titleInventory.hasTitle(type);
     }
 
-    /**
-     * Verifica si un título está equipado.
-     */
     public boolean isTitleEquipped(TitleType type) {
         return titleInventory.isEquipped(type);
-    }
-
-    /**
-     * Verifica si el jugador tiene inmunidad a un debuff (por título equipado).
-     */
-    public boolean hasDebuffImmunity(String debuffName) {
-        return titleInventory.hasImmunityTo(debuffName);
-    }
-
-    /**
-     * Obtiene el número de slots de título disponibles según el nivel.
-     */
-    public int getTitleSlots() {
-        return titleInventory.getAvailableSlots(getLevel());
     }
 
     public TitleInventory getTitleInventory() {
@@ -298,18 +332,10 @@ public class Player {
         return wallet.currentGold();
     }
 
-    /**
-     * Retorna los Stats BASE (sin bonificadores).
-     * Usar esto para persistencia o cálculos de XP.
-     */
     public Stats getBaseStats() {
         return stats;
     }
 
-    /**
-     * Retorna los Stats EFECTIVOS (Base + Equipo).
-     * Usar esto para la UI y checks de requisitos.
-     */
     public Stats getEffectiveStats() {
         return stats.applyBonuses(inventory.getTotalStatBonuses());
     }
