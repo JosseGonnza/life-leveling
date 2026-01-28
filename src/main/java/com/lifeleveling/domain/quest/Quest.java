@@ -13,7 +13,7 @@ import java.time.Instant;
  *   Fallar Quests tiene consecuencias (HP loss, Gold loss).
  */
 
-public sealed interface Quest permits DailyQuest, UserQuest, SystemQuest {
+public sealed interface Quest permits DailyQuest, UserQuest, SystemQuest, ElderQuest {
 
     QuestId id();
     String name();
