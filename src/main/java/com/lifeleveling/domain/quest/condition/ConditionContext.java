@@ -2,10 +2,8 @@ package com.lifeleveling.domain.quest.condition;
 
 import com.lifeleveling.domain.player.Player;
 import com.lifeleveling.domain.quest.SystemQuest;
-import com.lifeleveling.domain.quest.UserQuest;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * ConditionContext: Contexto con toda la información necesaria para evaluar condiciones.

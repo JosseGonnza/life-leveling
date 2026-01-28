@@ -1,7 +1,5 @@
 package com.lifeleveling.domain.quest.condition;
 
-import com.lifeleveling.domain.player.Player;
-
 /**
  * GateCondition: Representa una condición que debe cumplirse para completar una SystemQuest.
  *
