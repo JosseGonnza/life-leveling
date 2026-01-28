@@ -284,6 +284,92 @@ public class DebuffTracker {
     }
 
     // ========================================================================================
+    // LÓGICA DE CURAS (LA REDENCIÓN)
+    // ========================================================================================
+
+    /**
+     * Evalúa si el sueño registrado cura la Fatiga.
+     * Regla: Dormir >= 7h elimina FATIGUE.
+     */
+    public boolean checkSleepCure(double hoursSlept) {
+        if (hoursSlept >= 7.0 && hasDebuff(DebuffType.FATIGUE)) {
+            removeDebuff(DebuffType.FATIGUE);
+            return true; // Indica que hubo una cura
+        }
+        return false;
+    }
+
+    /**
+     * Evalúa si una tarea completada cura un debuff.
+     * Regla: Completar TIDY elimina CHAOS.
+     */
+    public boolean checkTaskCure(String taskId) {
+        if ("TIDY".equalsIgnoreCase(taskId)) {
+            // Al hacer Tidy, reseteamos el contador de suciedad
+            resetTidyStreak();
+
+            if (hasDebuff(DebuffType.CHAOS)) {
+                removeDebuff(DebuffType.CHAOS);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Evalúa si el consumo de un item cura algo.
+     * Gestiona la lógica compleja de Monster vs Taquicardia.
+     */
+    public Optional<DebuffType> checkItemCure(String itemId) {
+        // 1. Monster Energy -> Cura FATIGUE
+        if ("monster_energy".equals(itemId)) {
+            // CRÍTICO: Si tienes Taquicardia, el Monster NO funciona (y encima te daña más)
+            if (hasDebuff(DebuffType.TACHYCARDIA)) {
+                return Optional.empty();
+            }
+
+            if (hasDebuff(DebuffType.FATIGUE)) {
+                removeDebuff(DebuffType.FATIGUE);
+                return Optional.of(DebuffType.FATIGUE);
+            }
+        }
+
+        // 2. Almax -> Cura HEAVINESS
+        if ("almax".equals(itemId)) {
+            if (hasDebuff(DebuffType.HEAVINESS)) {
+                removeDebuff(DebuffType.HEAVINESS);
+                return Optional.of(DebuffType.HEAVINESS);
+            }
+        }
+
+        // 3. Ocio (Juegos/Cine) -> Cura BOREDOM
+        if ("videojuego".equals(itemId) || "entrada_cine".equals(itemId)) {
+            // Al divertirse, se rompe la racha de trabajo aburrido
+            resetWorkStreak();
+
+            if (hasDebuff(DebuffType.BOREDOM)) {
+                removeDebuff(DebuffType.BOREDOM);
+                return Optional.of(DebuffType.BOREDOM);
+            }
+        }
+
+        // 4. Inyección de Adrenalina -> Cura BURNOUT (Se gestiona en Player, pero aquí podríamos limpiar efectos secundarios)
+
+        return Optional.empty();
+    }
+
+    /**
+     * Llamado cuando ocurre un "Perfect Day".
+     * Regla: Limpia BOREDOM instantáneamente.
+     */
+    public void applyPerfectDayCure() {
+        if (hasDebuff(DebuffType.BOREDOM)) {
+            removeDebuff(DebuffType.BOREDOM);
+        }
+        // Perfect Day no cura enfermedades físicas (Heaviness/Tachycardia), solo mentales.
+    }
+
+    // ========================================================================================
     // UI HELPER
     // ========================================================================================
 
