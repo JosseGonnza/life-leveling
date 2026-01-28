@@ -24,9 +24,6 @@ public record ConditionContext(
         if (player == null) {
             throw new IllegalArgumentException("Player no puede ser null");
         }
-        if (gate == null) {
-            throw new IllegalArgumentException("Gate no puede ser null");
-        }
         if (tracker == null) {
             throw new IllegalArgumentException("Tracker no puede ser null");
         }
@@ -92,6 +89,6 @@ public record ConditionContext(
      * Obtiene el ID de la gate actual.
      */
     public String getGateId() {
-        return gate.id().toString();
+        return gate != null ? gate.id().toString() : "GENERIC_CONTEXT";
     }
 }

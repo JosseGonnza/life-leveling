@@ -2,12 +2,10 @@ package com.lifeleveling.domain.quest;
 
 import com.lifeleveling.domain.player.HPState;
 import com.lifeleveling.domain.quest.condition.ConditionContext;
-import com.lifeleveling.domain.quest.condition.GateCondition;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.List;
 import java.util.Objects;
 
 public final class ElderQuest implements Quest {
@@ -80,14 +78,14 @@ public final class ElderQuest implements Quest {
 
         // Si hemos cambiado de mes
         if (currentMonth.isAfter(questMonth)) {
-            // Reseteamos a IN_PROGRESS con nueva fecha de inicio
+            // CORRECCIÓN: Generamos un ID nuevo para la nueva misión mensual
             return new ElderQuest(
-                    this.id,
+                    QuestId.generate(), // <--- ANTES PONÍA: this.id
                     this.type,
                     QuestStatus.IN_PROGRESS,
                     currentDate.withDayOfMonth(1), // Primer día del nuevo mes
-                    this.createdAt, // Mantenemos fecha de creación original (desbloqueo)
-                    null // Limpiamos completado si lo estaba
+                    this.createdAt, // Mantenemos la fecha de desbloqueo original
+                    null
             );
         }
 
