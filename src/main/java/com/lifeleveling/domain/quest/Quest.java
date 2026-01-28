@@ -5,15 +5,17 @@ import java.time.Instant;
 /*
  * Tipos de Quest:
  *   - DailyQuest: Las 7 misiones recurrentes diarias
+ *   - WeeklyQuest: Desafíos rotativos semanales (3 de 6 activas)
  *   - UserQuest: Tareas creadas manualmente por el usuario
  *   - SystemQuest: Las Gates de ascenso de rango
+ *   - ElderQuest: Juicios del Monarca (nivel 75+)
  * Filosofía:
  *   Toda acción productiva en Life Leveling es una Quest.
  *   Completar Quests otorga recompensas (XP, Gold).
  *   Fallar Quests tiene consecuencias (HP loss, Gold loss).
  */
 
-public sealed interface Quest permits DailyQuest, UserQuest, SystemQuest, ElderQuest {
+public sealed interface Quest permits DailyQuest, WeeklyQuest, UserQuest, SystemQuest, ElderQuest {
 
     QuestId id();
     String name();
