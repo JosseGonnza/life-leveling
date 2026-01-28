@@ -127,11 +127,11 @@ class StatTest {
 
         @ParameterizedTest(name = "Lvl {0}, XP {1}/{2}: canLevelUp = {3}")
         @CsvSource({
-                "1,  50,  100, false",
-                "1,  100, 100, true",
-                "1,  150, 100, true",
-                "10, 1000, 1000, true",
-                "50, 4999, 5000, false",
+                "1,  5,   10, false",
+                "1,  10,  10, true",
+                "1,  15,  10, true",
+                "10, 100, 100, true",
+                "50, 499, 500, false",
                 "100, 0, 0, false"
         })
         @DisplayName("canLevelUp() verifica si puede subir de nivel")
@@ -147,11 +147,11 @@ class StatTest {
     class ExperienceCalculation {
         @ParameterizedTest(name = "Nivel {0}: XP requerida = {1}")
         @CsvSource({
-                "1,   100",
-                "5,   500",
-                "10,  1000",
-                "50,  5000",
-                "99,  9900",
+                "1,   10",
+                "5,   50",
+                "10,  100",
+                "50,  500",
+                "99,  990",
                 "100, 0"
         })
         @DisplayName("getXPRequiredForNextLevel() calcula correctamente")
@@ -162,11 +162,11 @@ class StatTest {
 
         @ParameterizedTest(name = "Lvl {0}, XP {1}/{2} = {3}%")
         @CsvSource({
-                "1,  0,    100,  0.0",
-                "1,  50,   100,  50.0",
-                "1,  100,  100,  100.0",
-                "10, 500,  1000, 50.0",
-                "50, 2500, 5000, 50.0",
+                "1,  0,    10,   0.0",
+                "1,  5,    10,   50.0",
+                "1,  10,   10,   100.0",
+                "10, 50,   100,  50.0",
+                "50, 250,  500,  50.0",
                 "100, 0,   0,    100.0"
         })
         @DisplayName("getProgressPercentage() calcula porcentaje correcto")
@@ -178,10 +178,10 @@ class StatTest {
         @ParameterizedTest(name = "Lvl {0} (XP {1}): Total XP = {2}")
         @CsvSource({
                 "1,  0,    0",
-                "2,  50,   150",
-                "3,  0,    300",
-                "10, 500,  5000",
-                "100, 0,   495000"
+                "2,  5,    15",
+                "3,  0,    30",
+                "10, 50,   500",
+                "100, 0,   49500"
         })
         @DisplayName("getTotalAccumulatedXP() suma XP gastada + XP actual")
         void whenGettingTotalXP_thenIncludesSpentAndCurrent(int level, int currentXP, int expectedTotal) {
@@ -196,10 +196,10 @@ class StatTest {
         @DisplayName("addXP() sin suficiente XP no sube de nivel")
         void whenAddingInsufficientXP_thenNoLevelUp() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            Stat result = stat.addXP(50);
+            Stat result = stat.addXP(5);
 
             assertEquals(1, result.currentLevel());
-            assertEquals(50, result.currentXP());
+            assertEquals(5, result.currentXP());
             assertFalse(result.canLevelUp());
         }
 
@@ -207,7 +207,7 @@ class StatTest {
         @DisplayName("addXP() con XP exacta sube 1 nivel")
         void whenAddingExactXP_thenLevelUpOnce() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            Stat result = stat.addXP(100);
+            Stat result = stat.addXP(10); // Fórmula: nivel × 10 → 1 × 10 = 10
 
             assertEquals(2, result.currentLevel());
             assertEquals(0, result.currentXP());
@@ -217,21 +217,21 @@ class StatTest {
         @DisplayName("addXP() con XP de sobra sube 1 nivel y guarda el resto")
         void whenAddingExcessXP_thenLevelUpAndSaveRemainder() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            Stat result = stat.addXP(150);
+            Stat result = stat.addXP(15); // 10 para nivel 2, sobran 5
 
             assertEquals(2, result.currentLevel());
-            assertEquals(50, result.currentXP());
+            assertEquals(5, result.currentXP());
         }
 
         @Test
         @DisplayName("addXP() sube múltiples niveles si hay suficiente XP")
         void whenAddingMassiveXP_thenMultipleLevelUps() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            // 100 (1→2) + 200 (2→3) + 300 (3→4) = 600 XP para llegar a Lvl 4
-            Stat result = stat.addXP(650);  // Sube a Lvl 4 con 50 XP sobrantes
+            // 10 (1→2) + 20 (2→3) + 30 (3→4) = 60 XP para llegar a Lvl 4
+            Stat result = stat.addXP(65);  // Sube a Lvl 4 con 5 XP sobrantes
 
             assertEquals(4, result.currentLevel());
-            assertEquals(50, result.currentXP());
+            assertEquals(5, result.currentXP());
         }
 
         @Test
@@ -309,7 +309,7 @@ class StatTest {
         @DisplayName("reset() devuelve el stat a nivel inicial")
         void whenResetting_thenBackToLevel1() {
             Stat stat = Stat.atLevel(StatType.STRENGTH, 50);
-            stat = stat.addXP(2500);
+            stat = stat.addXP(250); // 250 XP con multiplicador ×10
 
             Stat reset = stat.reset();
 
@@ -325,14 +325,14 @@ class StatTest {
         @Test
         @DisplayName("toDisplayString() formatea stat con toda la info")
         void whenFormattingDisplay_thenIncludesAllInfo() {
-            Stat stat = new Stat(StatType.STRENGTH, 23, 1450);
+            Stat stat = new Stat(StatType.STRENGTH, 23, 145);
             String display = stat.toDisplayString();
 
             assertTrue(display.contains("💪"));
             assertTrue(display.contains("Fuerza"));
             assertTrue(display.contains("Lvl 23"));
-            assertTrue(display.contains("1.450"));
-            assertTrue(display.contains("2.300"));
+            assertTrue(display.contains("145")); // XP actual
+            assertTrue(display.contains("230")); // XP requerida (23 × 10)
             assertTrue(display.contains("%"));
         }
 
@@ -358,7 +358,7 @@ class StatTest {
         @Test
         @DisplayName("toCompactString() formatea de forma reducida")
         void whenFormattingCompact_thenOnlyIconAndLevel() {
-            Stat stat = new Stat(StatType.STRENGTH, 23, 1450);
+            Stat stat = new Stat(StatType.STRENGTH, 23, 145);
             String compact = stat.toCompactString();
 
             assertEquals("💪 Lvl 23", compact);
@@ -393,8 +393,8 @@ class StatTest {
         @Test
         @DisplayName("Stats con mismos valores son equals()")
         void statsWithSameValues_areEqual() {
-            Stat stat1 = new Stat(StatType.STRENGTH, 10, 500);
-            Stat stat2 = new Stat(StatType.STRENGTH, 10, 500);
+            Stat stat1 = new Stat(StatType.STRENGTH, 10, 50);
+            Stat stat2 = new Stat(StatType.STRENGTH, 10, 50);
 
             assertEquals(stat1, stat2);
             assertEquals(stat1.hashCode(), stat2.hashCode());
@@ -403,8 +403,8 @@ class StatTest {
         @Test
         @DisplayName("Stats con diferentes tipos NO son equals()")
         void statsWithDifferentTypes_areNotEqual() {
-            Stat strength = new Stat(StatType.STRENGTH, 10, 500);
-            Stat intellect = new Stat(StatType.INTELLECT, 10, 500);
+            Stat strength = new Stat(StatType.STRENGTH, 10, 50);
+            Stat intellect = new Stat(StatType.INTELLECT, 10, 50);
 
             assertNotEquals(strength, intellect);
         }
@@ -416,9 +416,9 @@ class StatTest {
         @DisplayName("Operaciones encadenadas funcionan correctamente")
         void chainedOperations_workCorrectly() {
             Stat result = Stat.initial(StatType.STRENGTH)
-                    .addXP(250) // Lvl 2, 50 XP
-                    .addXP(150) // Lvl 3, 0 XP
-                    .addXP(300) // Lvl 4, 0 XP
+                    .addXP(25) // Lvl 2, 15 XP (10 para subir, sobran 15)
+                    .addXP(15) // Lvl 3, 10 XP (20 para subir de 2→3: 15+15=30, 30-20=10)
+                    .addXP(30) // Lvl 4, 10 XP (30 para subir de 3→4: 10+30=40, 40-30=10)
                     .forceLevel(1); // Lvl 5, 0 XP
 
             assertEquals(5, result.currentLevel());
@@ -430,8 +430,8 @@ class StatTest {
         void addingXPFromInitialToMaxed_works() {
             Stat stat = Stat.initial(StatType.STRENGTH);
 
-            // XP total para maxear: 495,000
-            stat = stat.addXP(495_000);
+            // XP total para maxear: Suma de (n × 10) para n=1 a 99 = 49,500
+            stat = stat.addXP(49_500);
 
             assertTrue(stat.isMaxed());
             assertEquals(100, stat.currentLevel());

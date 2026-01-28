@@ -128,9 +128,9 @@ class StatsTest {
         @DisplayName("getCurrentXP() retorna la XP actual del stat")
         void whenGettingCurrentXP_thenCorrectXP(StatType type) {
             Stats stats = Stats.initial();
-            stats = stats.addXP(type, 50);
+            stats = stats.addXP(type, 5); // Con multiplicador ×10, 5 XP no sube de nivel
 
-            assertEquals(50, stats.getCurrentXP(type));
+            assertEquals(5, stats.getCurrentXP(type));
         }
     }
 
@@ -216,18 +216,19 @@ class StatsTest {
         @DisplayName("getTotalAccumulatedXP() suma XP de todos los stats")
         void whenGettingTotalXP_thenSumsAllStats() {
             Stats stats = Stats.withLevels(2, 3, 4, 5, 6);
-            int expectedTotal = 100 + 300 + 600 + 1000 + 1500; // 3500 XP
+            // Con multiplicador ×10: 10 + 30 + 60 + 100 + 150 = 350 XP
+            int expectedTotal = 10 + 30 + 60 + 100 + 150;
 
             assertEquals(expectedTotal, stats.getTotalAccumulatedXP());
         }
 
         @Test
-        @DisplayName("getTotalAccumulatedXP() para stats maxeados es 2,475,000")
+        @DisplayName("getTotalAccumulatedXP() para stats maxeados es 247,500")
         void whenAllStatsMaxed_thenTotalXPIs2475000() {
             Stats stats = Stats.maxed();
 
-            // 495,000 XP por stat × 5 stats = 2,475,000 XP
-            assertEquals(2_475_000, stats.getTotalAccumulatedXP());
+            // 49,500 XP por stat × 5 stats = 247,500 XP
+            assertEquals(247_500, stats.getTotalAccumulatedXP());
         }
 
         @Test
@@ -254,7 +255,7 @@ class StatsTest {
         @DisplayName("addXP() aumenta solo el stat especificado")
         void whenAddingXP_thenOnlyTargetStatIncreases(StatType type) {
             Stats stats = Stats.initial();
-            Stats updated = stats.addXP(type, 150);
+            Stats updated = stats.addXP(type, 15); // Con ×10, 15 XP sube de 1→2 con 5 sobrantes
 
             // Solo el stat objetivo debe cambiar
             assertEquals(2, updated.getLevel(type), "Stat objetivo debe subir");
@@ -272,7 +273,7 @@ class StatsTest {
         @DisplayName("addXP() es inmutable: no modifica el original")
         void whenAddingXP_thenOriginalUnchanged() {
             Stats original = Stats.initial();
-            Stats updated = original.addXP(StatType.STRENGTH, 600);
+            Stats updated = original.addXP(StatType.STRENGTH, 60); // 10+20+30 = 60 para nivel 4
 
             assertEquals(1, original.getLevel(StatType.STRENGTH), "Original no debe cambiar");
             assertEquals(4, updated.getLevel(StatType.STRENGTH), "Nuevo debe tener cambios");
@@ -284,11 +285,12 @@ class StatsTest {
         void whenAddingXP_thenLevelUpsAutomatically() {
             Stats stats = Stats.initial();
 
-            // Añadir 650 XP a Fuerza (sube hasta Lvl 4)
-            stats = stats.addXP(StatType.STRENGTH, 650);
+            // Añadir 65 XP a Fuerza (sube hasta Lvl 4 con 5 sobrantes)
+            // 10 (1→2) + 20 (2→3) + 30 (3→4) = 60, sobran 5
+            stats = stats.addXP(StatType.STRENGTH, 65);
 
             assertEquals(4, stats.getLevel(StatType.STRENGTH));
-            assertEquals(50, stats.getCurrentXP(StatType.STRENGTH));
+            assertEquals(5, stats.getCurrentXP(StatType.STRENGTH));
         }
 
         @Test
@@ -454,9 +456,9 @@ class StatsTest {
         @DisplayName("Operaciones encadenadas funcionan correctamente")
         void chainedOperations_workCorrectly() {
             Stats result = Stats.initial()
-                    .addXP(StatType.STRENGTH, 250)
-                    .addXP(StatType.INTELLECT, 600)
-                    .addXP(StatType.WISDOM, 150)
+                    .addXP(StatType.STRENGTH, 25)   // 10 para 2, sobran 15 → lvl 2
+                    .addXP(StatType.INTELLECT, 60)  // 10+20+30=60 → lvl 4
+                    .addXP(StatType.WISDOM, 15)     // 10 para 2, sobran 5 → lvl 2
                     .forceLevel(StatType.DISCIPLINE, 10);
 
             assertEquals(2, result.getLevel(StatType.STRENGTH));
