@@ -1,4 +1,10 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.shared;
+
+import com.lifeleveling.domain.quest.daily.DailyQuest;
+import com.lifeleveling.domain.quest.elder.ElderQuest;
+import com.lifeleveling.domain.quest.system.SystemQuest;
+import com.lifeleveling.domain.quest.user.UserQuest;
+import com.lifeleveling.domain.quest.weekly.WeeklyQuest;
 
 import java.time.Instant;
 

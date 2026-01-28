@@ -1,4 +1,4 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.system;
 
 /*
  * Características:
@@ -7,6 +7,9 @@ package com.lifeleveling.domain.quest;
  *   - Épicas: Recompensas masivas y desbloqueos importantes
  *   - Narrativa: Cada una cuenta una historia de progresión
  */
+
+import com.lifeleveling.domain.quest.shared.QuestRank;
+import com.lifeleveling.domain.quest.shared.QuestReward;
 
 public enum SystemQuestType {
 

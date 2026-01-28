@@ -1,9 +1,11 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.weekly;
 
 import com.lifeleveling.domain.player.StatType;
+import com.lifeleveling.domain.quest.daily.DailyQuestType;
+import com.lifeleveling.domain.quest.shared.QuestRank;
+import com.lifeleveling.domain.quest.shared.QuestReward;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**

@@ -1,6 +1,6 @@
 package com.lifeleveling.domain.quest.condition;
 
-import com.lifeleveling.domain.quest.SystemQuestType;
+import com.lifeleveling.domain.quest.system.SystemQuestType;
 
 /**
  * PreviousGateRequired: Condición que requiere que una gate anterior esté completada.

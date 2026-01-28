@@ -1,7 +1,7 @@
 package com.lifeleveling.domain.quest.condition;
 
 import com.lifeleveling.domain.player.Player;
-import com.lifeleveling.domain.quest.SystemQuest;
+import com.lifeleveling.domain.quest.system.SystemQuest;
 
 import java.time.LocalDate;
 

@@ -1,4 +1,4 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.elder;
 
 import com.lifeleveling.domain.player.StatType;
 import com.lifeleveling.domain.quest.condition.ConsumableAbstinence;
@@ -9,9 +9,10 @@ import com.lifeleveling.domain.quest.condition.PagesRead;
 import com.lifeleveling.domain.quest.condition.PerfectDayStreak;
 import com.lifeleveling.domain.quest.condition.UserQuestsCompleted;
 import com.lifeleveling.domain.quest.condition.WeeklyQuestsCompleted;
+import com.lifeleveling.domain.quest.shared.QuestRank;
+import com.lifeleveling.domain.quest.shared.QuestReward;
 
 import java.util.List;
-import java.util.Map;
 
 public enum ElderQuestType {
 

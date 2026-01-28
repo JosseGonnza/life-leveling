@@ -1,7 +1,8 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.elder;
 
 import com.lifeleveling.domain.player.HPState;
 import com.lifeleveling.domain.quest.condition.ConditionContext;
+import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
 import java.time.LocalDate;

@@ -1,6 +1,7 @@
 package com.lifeleveling.domain.quest;
 
 import com.lifeleveling.domain.player.HPState;
+import com.lifeleveling.domain.quest.shared.QuestRank;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

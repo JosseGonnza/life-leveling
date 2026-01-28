@@ -1,4 +1,6 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.system;
+
+import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
 import java.util.Objects;

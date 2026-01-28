@@ -1,6 +1,7 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.weekly;
 
 import com.lifeleveling.domain.player.HPState;
+import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.DayOfWeek;
 import java.time.Instant;

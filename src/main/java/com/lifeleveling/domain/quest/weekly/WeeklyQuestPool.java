@@ -1,4 +1,4 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.weekly;
 
 import java.time.LocalDate;
 import java.util.*;

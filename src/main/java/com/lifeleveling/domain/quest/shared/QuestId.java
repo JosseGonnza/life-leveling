@@ -1,4 +1,4 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.shared;
 
 import java.util.UUID;
 

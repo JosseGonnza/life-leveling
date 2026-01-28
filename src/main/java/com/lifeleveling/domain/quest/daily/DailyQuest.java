@@ -1,4 +1,6 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.daily;
+
+import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
 import java.time.LocalDate;

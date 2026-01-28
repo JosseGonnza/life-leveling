@@ -1,6 +1,6 @@
 package com.lifeleveling.domain.quest.condition;
 
-import com.lifeleveling.domain.quest.QuestRank;
+import com.lifeleveling.domain.quest.shared.QuestRank;
 
 /**
  * UserQuestsCompleted: Número de User Quests completadas en periodo.

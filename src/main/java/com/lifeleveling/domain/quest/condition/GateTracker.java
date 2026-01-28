@@ -1,11 +1,10 @@
 package com.lifeleveling.domain.quest.condition;
 
-import com.lifeleveling.domain.quest.QuestRank;
-import com.lifeleveling.domain.quest.SystemQuestType;
+import com.lifeleveling.domain.quest.shared.QuestRank;
+import com.lifeleveling.domain.quest.system.SystemQuestType;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * GateTracker: El cerebro histórico del jugador.

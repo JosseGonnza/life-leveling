@@ -1,4 +1,4 @@
-package com.lifeleveling.domain.quest;
+package com.lifeleveling.domain.quest.elder;
 
 public enum ElderQuestFrequency {
     UNIQUE("Única", "Se completa una vez y otorga un beneficio permanente."),

@@ -1,5 +1,6 @@
 package com.lifeleveling.domain.quest;
 
+import com.lifeleveling.domain.quest.shared.QuestId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
