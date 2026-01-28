@@ -191,7 +191,33 @@ public enum ConditionType {
      *   - No resettable (binario: entraste en burnout o no)
      *   - Sin contador visible (es binario)
      */
-    NO_BURNOUT("🛡️", "Sin Burnout", "Evitar estado BURNOUT durante el periodo");
+    NO_BURNOUT("🛡️", "Sin Burnout", "Evitar estado BURNOUT durante el periodo"),
+
+    /**
+     * DEBUFF_FREE_STREAK: Mantener 0 debuffs activos durante N días consecutivos.
+     *
+     * Ejemplos:
+     *   - ELDER_5: 0 debuffs durante 30 días consecutivos
+     *
+     * Características:
+     *   - Automática
+     *   - RESETTABLE (si recibes un debuff, vuelve a 0)
+     *   - Con contador visible
+     */
+    DEBUFF_FREE_STREAK("✨", "Sin Debuffs", "Mantener 0 debuffs activos durante periodo consecutivo"),
+
+    /**
+     * WEEKLY_QUESTS_COMPLETED: Weekly Quests completadas en semanas consecutivas.
+     *
+     * Ejemplos:
+     *   - ELDER_6: 100% Weekly Quests (3/3) durante 4 semanas consecutivas
+     *
+     * Características:
+     *   - Automática
+     *   - RESETTABLE (si fallas una semana, vuelve a 0)
+     *   - Con contador visible
+     */
+    WEEKLY_QUESTS_COMPLETED("📅", "Weekly Quests Completadas", "Semanas consecutivas con 100% Weekly Quests");
 
     private final String icon;
     private final String displayName;
@@ -219,7 +245,8 @@ public enum ConditionType {
      */
     public boolean canReset() {
         return switch (this) {
-            case PERFECT_DAY_STREAK, HP_THRESHOLD, TIME_LIMIT, PAGES_READ -> true;
+            case PERFECT_DAY_STREAK, HP_THRESHOLD, TIME_LIMIT, PAGES_READ,
+                 DEBUFF_FREE_STREAK, WEEKLY_QUESTS_COMPLETED -> true;
             default -> false;
         };
     }
@@ -260,8 +287,9 @@ public enum ConditionType {
             case LEVEL_REQUIREMENT, PREVIOUS_GATE -> ConditionCategory.BASIC;
             case PERFECT_DAY_STREAK, TIME_LIMIT -> ConditionCategory.TEMPORAL;
             case GOLD_THRESHOLD, HP_THRESHOLD -> ConditionCategory.RESOURCE;
-            case CAREER_ENGINE_HOURS, USER_QUESTS_COMPLETED, PAGES_READ -> ConditionCategory.ACTIVITY;
-            case CONSUMABLE_ABSTINENCE, NO_BURNOUT -> ConditionCategory.RESTRICTION;
+            case CAREER_ENGINE_HOURS, USER_QUESTS_COMPLETED, PAGES_READ,
+                 WEEKLY_QUESTS_COMPLETED -> ConditionCategory.ACTIVITY;
+            case CONSUMABLE_ABSTINENCE, NO_BURNOUT, DEBUFF_FREE_STREAK -> ConditionCategory.RESTRICTION;
             case MANUAL_CONFIRMATION, BURNOUT_TRIGGER -> ConditionCategory.SPECIAL;
         };
     }
