@@ -2,16 +2,20 @@ package com.lifeleveling.domain.player;
 
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
+import com.lifeleveling.domain.title.TitleInventory;
+import com.lifeleveling.domain.title.TitleType;
 
 import java.util.UUID;
 
 /**
  * Player: La entidad raíz (Aggregate Root) del dominio.
- * * Responsabilidades:
+ *
+ * Responsabilidades:
  * 1. Mantener la consistencia entre HP, Stats y Wallet.
  * 2. Calcular el Nivel General basado en la XP total acumulada.
  * 3. Orquestar la recepción de daño y curación.
  * 4. Gestionar el equipamiento e inventario.
+ * 5. Gestionar los títulos desbloqueados y equipados.
  */
 public class Player {
 
@@ -24,14 +28,16 @@ public class Player {
     private Stats stats; // Stats Base (Real XP)
     private Wallet wallet;
 
-    // Componente mutable (Entidad interna)
+    // Componentes mutables (Entidades internas)
     private final Inventory inventory;
+    private final TitleInventory titleInventory;
 
     // Estado de Burnout (Bloqueo temporal)
     private BurnoutLock activeBurnoutLock;
 
     // Constructor privado para forzar uso de métodos factoría
-    private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet, Inventory inventory, BurnoutLock activeBurnoutLock) {
+    private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
+                   Inventory inventory, TitleInventory titleInventory, BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
         this.currentHP = currentHP;
@@ -39,6 +45,7 @@ public class Player {
         this.stats = stats;
         this.wallet = wallet;
         this.inventory = inventory;
+        this.titleInventory = titleInventory;
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -53,14 +60,16 @@ public class Player {
                 100, // HP Inicial
                 Stats.initial(),
                 Wallet.empty(),
-                new Inventory(), // Inventario vacío
-                null // Sin burnout al inicio
+                new Inventory(),       // Inventario vacío
+                new TitleInventory(),  // Sin títulos al inicio
+                null                   // Sin burnout al inicio
         );
     }
 
     // Para reconstruir desde persistencia (JSON/DB)
-    public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet, Inventory inventory, BurnoutLock lock) {
-        return new Player(id, name, currentHP, stats, wallet, inventory, lock);
+    public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
+                                  Inventory inventory, TitleInventory titleInventory, BurnoutLock lock) {
+        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, lock);
     }
 
     // ========================================================================================
@@ -85,16 +94,44 @@ public class Player {
 
     public void addXP(StatType type, int amount) {
         // 1. Aplicamos multiplicadores según estado de salud (ej: TIRED da 0.5x XP)
-        int finalAmount = hpState.applyXPMultiplier(amount);
+        int afterHpMultiplier = hpState.applyXPMultiplier(amount);
 
-        // 2. Delegamos la subida al objeto Stats BASE (que es inmutable, nos devuelve uno nuevo)
+        // 2. Aplicamos multiplicadores de títulos equipados
+        double titleMultiplier = titleInventory.getStatXPMultiplier(type);
+        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
+
+        // 3. Delegamos la subida al objeto Stats BASE (que es inmutable, nos devuelve uno nuevo)
         // OJO: La XP siempre se suma a los stats base, no a los dopados por equipo.
         this.stats = stats.addXP(type, finalAmount);
     }
 
+    /**
+     * Añade XP general (distribuida entre todos los stats o para nivel general).
+     * Aplica multiplicadores de estado de salud y títulos.
+     */
+    public void addGeneralXP(int amount) {
+        // 1. Aplicamos multiplicador de salud
+        int afterHpMultiplier = hpState.applyXPMultiplier(amount);
+
+        // 2. Aplicamos multiplicador de títulos para XP general
+        double titleMultiplier = titleInventory.getGeneralXPMultiplier();
+        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
+
+        // 3. Distribuimos equitativamente entre todos los stats
+        int perStat = finalAmount / StatType.values().length;
+        for (StatType type : StatType.values()) {
+            this.stats = stats.addXP(type, perStat);
+        }
+    }
+
     public void addGold(int amount) {
-        // 1. Aplicamos multiplicadores
-        int finalAmount = hpState.applyGoldMultiplier(amount);
+        // 1. Aplicamos multiplicadores de estado de salud
+        int afterHpMultiplier = hpState.applyGoldMultiplier(amount);
+
+        // 2. Aplicamos multiplicadores de títulos
+        double titleMultiplier = titleInventory.getGoldMultiplier();
+        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
+
         this.wallet = wallet.add(finalAmount);
     }
 
@@ -114,7 +151,10 @@ public class Player {
             // Reglas especiales de curación en Burnout se manejarían aquí o en el servicio
         }
 
-        this.currentHP = Math.min(100, currentHP + amount);
+        // Aplicamos bonus de recuperación de HP de títulos equipados
+        int finalAmount = titleInventory.applyHPRecoveryBonus(amount);
+
+        this.currentHP = Math.min(100, currentHP + finalAmount);
         this.hpState = HPState.fromHP(this.currentHP);
     }
 
@@ -177,6 +217,73 @@ public class Player {
 
     public Inventory getInventory() {
         return inventory;
+    }
+
+    // ========================================================================================
+    // GESTIÓN DE TÍTULOS
+    // ========================================================================================
+
+    /**
+     * Desbloquea un nuevo título para el jugador.
+     * @return true si se desbloqueó (no lo tenía), false si ya lo tenía
+     */
+    public boolean unlockTitle(TitleType type) {
+        return titleInventory.unlock(type);
+    }
+
+    /**
+     * Equipa un título en un slot disponible.
+     * @throws IllegalStateException si no tiene el título o no hay slots disponibles
+     */
+    public void equipTitle(TitleType type) {
+        titleInventory.equip(type, getLevel());
+    }
+
+    /**
+     * Desequipa un título.
+     * @return true si se desequipó, false si no estaba equipado
+     */
+    public boolean unequipTitle(TitleType type) {
+        return titleInventory.unequip(type);
+    }
+
+    /**
+     * Intercambia un título equipado por otro.
+     */
+    public void swapTitle(TitleType oldType, TitleType newType) {
+        titleInventory.swap(oldType, newType, getLevel());
+    }
+
+    /**
+     * Verifica si el jugador tiene un título desbloqueado.
+     */
+    public boolean hasTitle(TitleType type) {
+        return titleInventory.hasTitle(type);
+    }
+
+    /**
+     * Verifica si un título está equipado.
+     */
+    public boolean isTitleEquipped(TitleType type) {
+        return titleInventory.isEquipped(type);
+    }
+
+    /**
+     * Verifica si el jugador tiene inmunidad a un debuff (por título equipado).
+     */
+    public boolean hasDebuffImmunity(String debuffName) {
+        return titleInventory.hasImmunityTo(debuffName);
+    }
+
+    /**
+     * Obtiene el número de slots de título disponibles según el nivel.
+     */
+    public int getTitleSlots() {
+        return titleInventory.getAvailableSlots(getLevel());
+    }
+
+    public TitleInventory getTitleInventory() {
+        return titleInventory;
     }
 
     // ========================================================================================
