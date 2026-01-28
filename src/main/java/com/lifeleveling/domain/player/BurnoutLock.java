@@ -52,6 +52,11 @@ public record BurnoutLock(
         }
     }
 
+    // Añadir este factory method que usa Player
+    public static BurnoutLock createNow() {
+        return trigger(Instant.now());
+    }
+
     public static BurnoutLock trigger(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("El timestamp actual no puede ser null");

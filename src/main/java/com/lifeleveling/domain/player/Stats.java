@@ -141,13 +141,17 @@ public record Stats(
         return getMaxedCount() == 5;
     }
 
-    // XP total acumulada (máximo: 2,475,000 si todos están maxeados)
-    public int getTotalXPAccumulated() {
-        return strength.getTotalXPAccumulated()
-                + intellect.getTotalXPAccumulated()
-                + wisdom.getTotalXPAccumulated()
-                + discipline.getTotalXPAccumulated()
-                + charisma.getTotalXPAccumulated();
+    /**
+     * Calcula la XP Total Acumulada sumando todos los stats.
+     * Esta cifra se usa para calcular el Nivel General del Jugador.
+     * @return XP Total (long)
+     */
+    public long getTotalAccumulatedXP() {
+        return strength.getTotalAccumulatedXP()
+                + intellect.getTotalAccumulatedXP()
+                + wisdom.getTotalAccumulatedXP()
+                + discipline.getTotalAccumulatedXP()
+                + charisma.getTotalAccumulatedXP();
     }
 
     public StatType getDominantStat() {
@@ -211,8 +215,7 @@ public record Stats(
         return displayMap;
     }
 
-
-     //Ejemplo: "💪 Lvl 23 | 🧠 Lvl 47 | 🦉 Lvl 29 | 🛡️ Lvl 34 | 🗣️ Lvl 18"
+    //Ejemplo: "💪 Lvl 23 | 🧠 Lvl 47 | 🦉 Lvl 29 | 🛡️ Lvl 34 | 🗣️ Lvl 18"
     public String toCompactString() {
         return String.format("%s | %s | %s | %s | %s",
                 strength.toCompactString(),

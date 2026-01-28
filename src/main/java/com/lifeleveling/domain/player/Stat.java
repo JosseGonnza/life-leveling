@@ -2,11 +2,11 @@ package com.lifeleveling.domain.player;
 
 /*
  * Mecánicas de Progresión:
- *   - Nivel: 1 (inicio) a 100 (máximo)
- *   - XP por Nivel: Nivel_Actual × 100 (ej: Nivel 10→11 requiere 1,000 XP)
- *   - XP Total para Maxear: 495,000 XP (suma de 100+200+...+9,900)
- *   - Maestría: Al nivel 50 se desbloquea el Título de Maestría
-*/
+ * - Nivel: 1 (inicio) a 100 (máximo)
+ * - XP por Nivel: Nivel_Actual × 100 (ej: Nivel 10→11 requiere 1,000 XP)
+ * - XP Total para Maxear: 495,000 XP (suma de 100+200+...+9,900)
+ * - Maestría: Al nivel 50 se desbloquea el Título de Maestría
+ */
 public record Stat(StatType type, int currentLevel, int currentXP) {
 
     public static final int INITIAL_LEVEL = 1;
@@ -28,7 +28,7 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
                     String.format("XP no puede ser negativa: %d", currentXP)
             );
         }
-        //Si está al nivel máximo, la XP debe ser 0 (no puede seguir subiendo)
+        // Si está al nivel máximo, la XP debe ser 0 (no puede seguir subiendo)
         if (currentLevel == MAX_LEVEL && currentXP > 0) {
             throw new IllegalArgumentException(
                     String.format("Un stat en nivel máximo (%d) no puede tener XP acumulada", MAX_LEVEL)
@@ -88,8 +88,13 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
         return (currentXP * 100.0) / xpNeeded;
     }
 
-    public int getTotalXPAccumulated() {
-        int xpFromPreviousLevels = StatType.getTotalXPForLevel(currentLevel);
+    /**
+     * Calcula la XP total histórica acumulada (Niveles pasados + XP actual).
+     * Retorna long para evitar desbordamiento en cálculos agregados.
+     */
+    public long getTotalAccumulatedXP() {
+        // Obtenemos la XP necesaria para llegar al nivel actual (la suma de todos los niveles anteriores)
+        long xpFromPreviousLevels = StatType.getTotalXPForLevel(currentLevel);
         return xpFromPreviousLevels + currentXP;
     }
 
@@ -106,9 +111,11 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
         if (isMaxed()) {
             return this;
         }
-        // Añadimos la XP y procesamos level-ups
+
+        // Añadimos la XP y procesamos level-ups recursivos
         int newXP = this.currentXP + xpGained;
         int newLevel = this.currentLevel;
+
         // Procesamos level-ups mientras sea posible
         while (newLevel < MAX_LEVEL) {
             int xpNeeded = StatType.getXPRequiredForNextLevel(newLevel);
@@ -119,6 +126,7 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
                 break;
             }
         }
+
         // Si llegamos al nivel máximo, la XP sobrante se descarta
         if (newLevel == MAX_LEVEL) {
             newXP = 0;
@@ -145,8 +153,7 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
     // MÉTODOS DE FORMATEO (UI)
     // ========================================================================================
 
-
-     //Ej: "💪 Fuerza Lvl 23 (1,450/2,300 XP) [63%]"
+    // Ejemplo: "💪 Fuerza Lvl 23 (1,450/2,300 XP) [63%]"
     public String toDisplayString() {
         StringBuilder sb = new StringBuilder();
         sb.append(type.toDisplayString());
@@ -166,7 +173,7 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
         return sb.toString();
     }
 
-     //Ej: "💪 Lvl 23"
+    // Ejemplo: "💪 Lvl 23"
     public String toCompactString() {
         return String.format("%s Lvl %d", type.getIcon(), currentLevel);
     }
@@ -175,6 +182,6 @@ public record Stat(StatType type, int currentLevel, int currentXP) {
     public String toString() {
         return String.format("Stat[type=%s, level=%d, xp=%d/%d, totalXP=%d]",
                 type.name(), currentLevel, currentXP, getXPRequiredForNextLevel(),
-                getTotalXPAccumulated());
+                getTotalAccumulatedXP());
     }
 }
