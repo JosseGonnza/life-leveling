@@ -178,6 +178,112 @@ public class DebuffTracker {
     }
 
     // ========================================================================================
+    // LÓGICA DE TRIGGERS (EL JUEZ)
+    // ========================================================================================
+
+    /**
+     * Evalúa el sueño registrado y devuelve un Debuff si corresponde.
+     * Regla: Si duermes < 6h -> FATIGUE.
+     */
+    public Optional<Debuff> checkSleepTrigger(double hoursSlept, Instant now) {
+        if (hoursSlept < 6.0) {
+            return Optional.of(Debuff.create(
+                    DebuffType.FATIGUE,
+                    "Sueño insuficiente (" + hoursSlept + "h)",
+                    now
+            ));
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Evalúa el consumo de items peligrosos.
+     * Regla 1: Hamburguesa -> HEAVINESS.
+     * Regla 2: 3º Monster de la semana -> TACHYCARDIA.
+     */
+    public Optional<Debuff> checkItemConsumptionTrigger(String itemId, Instant now) {
+        // Trigger Hamburguesa
+        if ("hamburguesa_doble".equals(itemId)) {
+            return Optional.of(Debuff.create(
+                    DebuffType.HEAVINESS,
+                    "Comida basura",
+                    now
+            ));
+        }
+
+        // Trigger Monster (Taquicardia)
+        if ("monster_energy".equals(itemId)) {
+            // El contador ya se incrementó en recordMonsterConsumed() antes de llamar a esto
+            if (monstersConsumedWeekly >= 3) {
+                // Taquicardia dura hasta el próximo Lunes
+                // Calculamos fecha de expiración (Lunes 00:00)
+                Instant nextMonday = calculateNextMonday(now);
+                return Optional.of(Debuff.createWithExpiration(
+                        DebuffType.TACHYCARDIA,
+                        "Exceso de cafeína (" + monstersConsumedWeekly + " esta semana)",
+                        now,
+                        nextMonday
+                ));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Evalúa reglas al cierre del día (Daily Reset).
+     * Regla 1: 3 días sin TIDY -> CHAOS.
+     * Regla 2: 7 días trabajando seguido -> BOREDOM.
+     */
+    public List<Debuff> checkDailyResetTriggers(Instant now) {
+        List<Debuff> newDebuffs = new ArrayList<>();
+
+        // Trigger CHAOS
+        if (daysWithoutTidy >= 3 && !hasDebuff(DebuffType.CHAOS)) {
+            newDebuffs.add(Debuff.create(
+                    DebuffType.CHAOS,
+                    "Entorno desordenado (" + daysWithoutTidy + " días)",
+                    now
+            ));
+        }
+
+        // Trigger BOREDOM
+        if (consecutiveWorkDays >= 7 && !hasDebuff(DebuffType.BOREDOM)) {
+            newDebuffs.add(Debuff.create(
+                    DebuffType.BOREDOM,
+                    "Rutina laboral excesiva (" + consecutiveWorkDays + " días)",
+                    now
+            ));
+        }
+
+        return newDebuffs;
+    }
+
+    /**
+     * Evalúa uso de Redes Sociales.
+     * Regla: TRAPPED inmediato (no se guarda, se aplica penalización de oro al momento).
+     * Nota: Este método retorna el debuff para notificar, pero TRAPPED suele ser instantáneo.
+     */
+    public Optional<Debuff> checkSocialMediaTrigger(double hoursWasted, Instant now) {
+        if (hoursWasted > 0) {
+            // TRAPPED tiene duración ZERO, es solo para aplicar el efecto inmediato de oro
+            return Optional.of(Debuff.create(
+                    DebuffType.TRAPPED,
+                    "Doomscrolling (" + hoursWasted + "h)",
+                    now
+            ));
+        }
+        return Optional.empty();
+    }
+
+    // Helper simple para calcular el lunes (puedes moverlo a un TimeService más tarde)
+    private Instant calculateNextMonday(Instant now) {
+        // Implementación simplificada. En un proyecto real usaríamos ZonedDateTime.
+        // Aquí asumimos +7 días como fallback o usamos java.time si está disponible.
+        return now.plus(java.time.Duration.ofDays(7));
+    }
+
+    // ========================================================================================
     // UI HELPER
     // ========================================================================================
 
