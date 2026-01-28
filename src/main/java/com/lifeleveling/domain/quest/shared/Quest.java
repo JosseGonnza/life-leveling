@@ -1,11 +1,5 @@
 package com.lifeleveling.domain.quest.shared;
 
-import com.lifeleveling.domain.quest.daily.DailyQuest;
-import com.lifeleveling.domain.quest.elder.ElderQuest;
-import com.lifeleveling.domain.quest.system.SystemQuest;
-import com.lifeleveling.domain.quest.user.UserQuest;
-import com.lifeleveling.domain.quest.weekly.WeeklyQuest;
-
 import java.time.Instant;
 
 /*
@@ -21,7 +15,7 @@ import java.time.Instant;
  *   Fallar Quests tiene consecuencias (HP loss, Gold loss).
  */
 
-public sealed interface Quest permits DailyQuest, WeeklyQuest, UserQuest, SystemQuest, ElderQuest {
+public interface Quest {
 
     QuestId id();
     String name();
