@@ -183,10 +183,10 @@ class StatTest {
                 "10, 500,  5000",
                 "100, 0,   495000"
         })
-        @DisplayName("getTotalXPAccumulated() suma XP gastada + XP actual")
+        @DisplayName("getTotalAccumulatedXP() suma XP gastada + XP actual")
         void whenGettingTotalXP_thenIncludesSpentAndCurrent(int level, int currentXP, int expectedTotal) {
             Stat stat = new Stat(StatType.STRENGTH, level, currentXP);
-            assertEquals(expectedTotal, stat.getTotalXPAccumulated());
+            assertEquals(expectedTotal, stat.getTotalAccumulatedXP());
         }
     }
 

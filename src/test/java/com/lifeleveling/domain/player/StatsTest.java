@@ -213,21 +213,21 @@ class StatsTest {
         }
 
         @Test
-        @DisplayName("getTotalXPAccumulated() suma XP de todos los stats")
+        @DisplayName("getTotalAccumulatedXP() suma XP de todos los stats")
         void whenGettingTotalXP_thenSumsAllStats() {
             Stats stats = Stats.withLevels(2, 3, 4, 5, 6);
             int expectedTotal = 100 + 300 + 600 + 1000 + 1500; // 3500 XP
 
-            assertEquals(expectedTotal, stats.getTotalXPAccumulated());
+            assertEquals(expectedTotal, stats.getTotalAccumulatedXP());
         }
 
         @Test
-        @DisplayName("getTotalXPAccumulated() para stats maxeados es 2,475,000")
+        @DisplayName("getTotalAccumulatedXP() para stats maxeados es 2,475,000")
         void whenAllStatsMaxed_thenTotalXPIs2475000() {
             Stats stats = Stats.maxed();
 
             // 495,000 XP por stat × 5 stats = 2,475,000 XP
-            assertEquals(2_475_000, stats.getTotalXPAccumulated());
+            assertEquals(2_475_000, stats.getTotalAccumulatedXP());
         }
 
         @Test
@@ -470,7 +470,7 @@ class StatsTest {
         @DisplayName("Stats inicial tiene 0 XP total acumulada")
         void initialStats_hasZeroTotalXP() {
             Stats stats = Stats.initial();
-            assertEquals(0, stats.getTotalXPAccumulated());
+            assertEquals(0, stats.getTotalAccumulatedXP());
         }
     }
 }
