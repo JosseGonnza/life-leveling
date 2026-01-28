@@ -5,22 +5,17 @@ import com.lifeleveling.domain.debuff.DebuffTracker;
 import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
+import com.lifeleveling.domain.quest.condition.GateTracker; // Importante: Fase 9
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Player: La entidad raíz (Aggregate Root) del dominio.
- *
- * Responsabilidades:
- * 1. Mantener la consistencia entre HP, Stats y Wallet.
- * 2. Calcular el Nivel General basado en la XP total acumulada.
- * 3. Orquestar la recepción de daño y curación.
- * 4. Gestionar el equipamiento e inventario.
- * 5. Gestionar los títulos desbloqueados y equipados.
- * 6. Gestionar los Debuffs activos y sus penalizaciones. [Nuevo]
+ * El "Dios" del estado del juego.
  */
 public class Player {
 
@@ -36,9 +31,8 @@ public class Player {
     // Componentes mutables (Entidades internas)
     private final Inventory inventory;
     private final TitleInventory titleInventory;
-
-    // [Fase 4] Nuevo componente: Cerebro de Debuffs
     private final DebuffTracker debuffTracker;
+    private final GateTracker gateTracker; // [Fase 9] Historial y Rachas
 
     // Estado de Burnout (Bloqueo temporal)
     private BurnoutLock activeBurnoutLock;
@@ -46,16 +40,18 @@ public class Player {
     // Constructor privado para forzar uso de métodos factoría
     private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
-                   DebuffTracker debuffTracker, BurnoutLock activeBurnoutLock) {
+                   DebuffTracker debuffTracker, GateTracker gateTracker, // [Fase 9] Param
+                   BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
         this.currentHP = currentHP;
-        this.hpState = HPState.fromHP(currentHP); // El estado se deriva del HP numérico
+        this.hpState = HPState.fromHP(currentHP);
         this.stats = stats;
         this.wallet = wallet;
         this.inventory = inventory;
         this.titleInventory = titleInventory;
         this.debuffTracker = debuffTracker;
+        this.gateTracker = gateTracker; // [Fase 9] Asignación
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -70,94 +66,56 @@ public class Player {
                 100, // HP Inicial
                 Stats.initial(),
                 Wallet.empty(),
-                new Inventory(),       // Inventario vacío
-                new TitleInventory(),  // Sin títulos al inicio
-                new DebuffTracker(),   // [Fase 4] Tracker vacío
-                null                   // Sin burnout al inicio
+                new Inventory(),
+                new TitleInventory(),
+                new DebuffTracker(),
+                new GateTracker(), // [Fase 9] Inicializar vacío
+                null
         );
     }
 
     // Para reconstruir desde persistencia (JSON/DB)
     public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
-                                 DebuffTracker debuffTracker, BurnoutLock lock) {
-        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, debuffTracker, lock);
+                                 DebuffTracker debuffTracker, GateTracker gateTracker, // [Fase 9] Param
+                                 BurnoutLock lock) {
+        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, debuffTracker, gateTracker, lock);
     }
 
     // ========================================================================================
-    // LÓGICA DE NEGOCIO PRINCIPAL
+    // LÓGICA DE NEGOCIO PRINCIPAL (LEVELING)
     // ========================================================================================
 
-    /**
-     * Calcula el Nivel General del jugador basado en la XP total de todos sus stats.
-     * Fórmula inversa de: Total_XP = 45 * Nivel^2
-     * Nivel = Raíz_Cuadrada(Total_XP / 45)
-     */
     public int getLevel() {
         long totalXP = stats.getTotalAccumulatedXP();
         if (totalXP == 0) return 1;
-
-        // Aplicamos la fórmula inversa para sacar el nivel actual
         int level = (int) Math.sqrt(totalXP / 45.0);
-
-        // Clamp: Mínimo nivel 1, Máximo nivel 100
         return Math.max(1, Math.min(level, 100));
     }
 
-    /**
-     * Añade XP a un stat. Aplica penalizaciones de Salud (TIRED) y Debuffs (CHAOS, FATIGUE).
-     * Y Bonificadores de Títulos.
-     */
     public void addXP(StatType type, int amount) {
         if (amount <= 0) return;
 
-        // --- PASO 1: Penalizaciones por Salud (HPState) ---
-        // Ej: TIRED reduce XP a la mitad.
         double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
-        // Nota: Si HPState ya tenía un método applyXPMultiplier, úsalo, pero devuelve int y perdemos precisión para los siguientes pasos.
-        // Mejor trabajar con doubles hasta el final.
-
-        // --- PASO 2: Penalizaciones por Debuffs [Fase 4] ---
-        // Ej: FATIGUE (0.5 global) y CHAOS (0.8 WIS).
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
-
-        // --- PASO 3: Bonificadores de Títulos ---
         double titleMultiplier = titleInventory.getStatXPMultiplier(type);
 
-        // --- CÁLCULO FINAL ---
-        // XP = Base * (HP_Factor * Debuff_Global * Debuff_Stat) * Title_Bonus
         double totalMultiplier = hpMultiplier * debuffGlobalMult * debuffStatMult * titleMultiplier;
-
         int finalAmount = (int) Math.round(amount * totalMultiplier);
 
-        // Logging de depuración si hubo reducción drástica
-        if (finalAmount < amount) {
-            // System.out.println("🔻 XP Reducida: " + amount + " -> " + finalAmount + " (HP:" + hpMultiplier + ", Debuffs:" + (debuffGlobalMult*debuffStatMult) + ")");
-        }
-
         if (finalAmount > 0) {
-            // 4. Delegamos la subida al objeto Stats BASE
             this.stats = stats.addXP(type, finalAmount);
-
-            // 5. [Regla de Oro] La XP Neta ganada se suma también al Nivel General (implícito en Stats.getTotalAccumulatedXP, pero si tienes un contador separado, súmalo aquí).
-            // Si tu implementación de Stats ya maneja la XP General internamente, perfecto. Si no:
-            // this.stats = stats.addGeneralXP(finalAmount);
         }
     }
 
-    /**
-     * Añade XP general pura.
-     */
     public void addGeneralXP(int amount) {
-        // Misma lógica de multiplicadores globales
         double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double titleMultiplier = titleInventory.getGeneralXPMultiplier();
 
         int finalAmount = (int) Math.round(amount * hpMultiplier * debuffGlobalMult * titleMultiplier);
 
-        // Distribuimos equitativamente entre stats para mantener la coherencia
         if (finalAmount > 0) {
             int perStat = finalAmount / StatType.values().length;
             for (StatType type : StatType.values()) {
@@ -167,16 +125,9 @@ public class Player {
     }
 
     public void addGold(int amount) {
-        // 1. Salud
         int afterHpMultiplier = hpState.applyGoldMultiplier(amount);
-
-        // 2. Debuffs (Si alguno penaliza ganancia global de oro, iría aquí)
-        // Por ahora TRAPPED penaliza por hora, no porcentual.
-
-        // 3. Títulos
         double titleMultiplier = titleInventory.getGoldMultiplier();
         int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
-
         this.wallet = wallet.add(finalAmount);
     }
 
@@ -192,13 +143,7 @@ public class Player {
     // ========================================================================================
 
     public void heal(int amount) {
-        if (isBurnoutActive()) {
-            // Reglas especiales de curación en Burnout...
-        }
-
-        // Bonus de títulos
         int finalAmount = titleInventory.applyHPRecoveryBonus(amount);
-
         this.currentHP = Math.min(100, currentHP + finalAmount);
         this.hpState = HPState.fromHP(this.currentHP);
     }
@@ -234,19 +179,21 @@ public class Player {
     }
 
     // ========================================================================================
-    // GESTIÓN DE DEBUFFS
+    // GESTIÓN DE DEBUFFS (Con Integración GateTracker - Fase 9)
     // ========================================================================================
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
-        // [Fase 5] Verificar Inmunidad por Títulos
-        // Ej: Título "Mente de Acero" da inmunidad a "CHAOS"
+        // 1. Verificar Inmunidad (Títulos)
         if (titleInventory.hasImmunityTo(type.name())) {
-            // System.out.println("🛡️ INMUNE a " + type.getDisplayName() + " gracias a tus títulos.");
             return;
         }
 
+        // 2. Aplicar Debuff
         Debuff debuff = Debuff.create(type, source, now);
         debuffTracker.applyDebuff(debuff);
+
+        // 3. [Fase 9] Notificar al Tracker de Progreso (Romper Racha)
+        gateTracker.notifyDebuffReceived();
     }
 
     public void cureDebuff(DebuffType type) {
@@ -259,12 +206,87 @@ public class Player {
         return debuffTracker;
     }
 
-    // Método para el ciclo diario (Clean Up)
+    /**
+     * Método para el ciclo diario (Clean Up).
+     * Se llama al iniciar la app o cambiar de día.
+     */
     public void updateState(Instant now) {
-        // Limpiamos debuffs expirados
+        // Limpiar debuffs caducados
         debuffTracker.cleanExpiredDebuffs(now);
-        // Intentamos limpiar Burnout si corresponde
+        // Intentar salir de Burnout
         tryClearBurnout();
+
+        // [Fase 9] Verificar si merecemos sumar racha limpia
+        if (debuffTracker.getActiveDebuffs().isEmpty()) {
+            gateTracker.incrementDebuffFreeStreak();
+        }
+    }
+
+    // ========================================================================================
+    // CONSUMO DE ITEMS (Fase 8)
+    // ========================================================================================
+
+    public void consumeItem(Item item) {
+        // 1. Verificar existencia
+        if (!inventory.hasItem(item.id())) {
+            throw new IllegalStateException("No tienes este item en el inventario: " + item.name());
+        }
+
+        System.out.println("🥣 Consumiendo: " + item.name());
+
+        // 2. Efectos base (HP)
+        if (item.hpRecovery() > 0) {
+            this.heal(item.hpRecovery());
+        }
+        if (item.hpDamage() > 0) {
+            this.takeDamage(item.hpDamage());
+        }
+
+        // 3. Efectos secundarios (Debuffs/Curas)
+        applyItemSideEffects(item);
+
+        // 4. Eliminar del inventario
+        inventory.removeItem(item.id());
+    }
+
+    private void applyItemSideEffects(Item item) {
+        Instant now = Instant.now();
+
+        // A. Causa Debuff
+        if (item.causesDebuff().isPresent()) {
+            DebuffType debuffToApply = item.causesDebuff().get();
+            this.applyDebuff(debuffToApply, "Consumo de " + item.name(), now);
+        }
+
+        // B. Cura Debuff
+        if (item.curesDebuff().isPresent()) {
+            DebuffType debuffToCure = item.curesDebuff().get();
+
+            // Lógica Especial: Cafeína
+            if (item.isCaffeineSource()) {
+                handleCaffeineConsumption(debuffToCure, item.id());
+            } else {
+                // Cura estándar
+                this.cureDebuff(debuffToCure);
+            }
+        }
+    }
+
+    private void handleCaffeineConsumption(DebuffType debuffToCure, String itemId) {
+        // Usamos el helper del tracker
+        if (!debuffTracker.canCureWithCaffeine()) {
+            System.out.println("💓 Tu corazón va a mil. La cafeína no surte efecto.");
+            return;
+        }
+
+        this.cureDebuff(debuffToCure);
+
+        // Riesgo de sobredosis (Monster)
+        if (itemId.equalsIgnoreCase("monster_energy")) {
+            debuffTracker.recordMonsterConsumed();
+            Optional<Debuff> overdose = debuffTracker.checkItemConsumptionTrigger(itemId, Instant.now());
+            overdose.ifPresent(d -> this.applyDebuff(d.getType(), d.getSource(), d.getAppliedAt()));
+        }
     }
 
     // ========================================================================================
@@ -350,5 +372,9 @@ public class Player {
 
     public String getName() {
         return name;
+    }
+
+    public GateTracker getGateTracker() { // Getter
+        return gateTracker;
     }
 }

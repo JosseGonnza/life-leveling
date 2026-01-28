@@ -11,11 +11,10 @@ public class Inventory {
     private final List<Item> ownedItems;
     private final Map<ItemSlot, Item> equippedItems;
 
-    // Historial de compras (IDs de items y fecha). Vital para Elder Quest "Voto de Pobreza".
+    // Historial de compras (IDs de items y fecha).
     private final List<PurchaseRecord> purchaseHistory;
 
-    // Cooldowns para items especiales (Café Infinito, Llave Maestra)
-    // Key: ItemID, Value: Cuándo estará disponible de nuevo
+    // Cooldowns para items especiales
     private final Map<String, Instant> itemCooldowns;
 
     public Inventory() {
@@ -36,6 +35,20 @@ public class Inventory {
             return;
         }
         ownedItems.add(item);
+    }
+
+    /**
+     * [NUEVO] Método necesario para consumir items.
+     * Elimina una instancia del item del inventario.
+     */
+    public void removeItem(String itemId) {
+        // Buscamos el primer item que coincida con el ID
+        Optional<Item> itemToRemove = ownedItems.stream()
+                .filter(i -> i.id().equals(itemId))
+                .findFirst();
+
+        // Si existe, lo borramos de la lista (solo uno, por si tienes 10 pociones)
+        itemToRemove.ifPresent(ownedItems::remove);
     }
 
     public boolean hasItem(String itemId) {
@@ -65,8 +78,6 @@ public class Inventory {
             throw new IllegalArgumentException("Este item no se puede equipar (es de inventario)");
         }
 
-        // Reemplazar: Si ya hay algo, vuelve a la mochila (conceptualmente)
-        // En este modelo simple, 'ownedItems' tiene TODO, y 'equippedItems' tiene la referencia activa.
         equippedItems.put(item.slot(), item);
     }
 
@@ -79,13 +90,9 @@ public class Inventory {
     }
 
     // ========================================================================================
-    // CÁLCULO DE STATS (La magia RPG)
+    // CÁLCULO DE STATS
     // ========================================================================================
 
-    /**
-     * Calcula el total de bonificadores de todos los items equipados.
-     * El Player usará esto para sumar a sus Stats base.
-     */
     public Map<StatType, Integer> getTotalStatBonuses() {
         Map<StatType, Integer> totalBonuses = new EnumMap<>(StatType.class);
 
@@ -97,19 +104,12 @@ public class Inventory {
         return totalBonuses;
     }
 
-    /**
-     * Calcula la mitigación de daño total (ej: Silla -1 HP, Ratón -1 HP).
-     * Se usará en el método takeWorkDamage del Player.
-     */
     public int getTotalDamageMitigation() {
-        // En el futuro, podríamos poner esto como un atributo en Item.java (mitigation)
-        // Por ahora, asumimos que ciertos items reducen daño si están equipados.
-        // Implementación placeholder o basada en lógica específica
-        return 0;
+        return 0; // Implementar lógica futura aquí si es necesario
     }
 
     // ========================================================================================
-    // SISTEMA DE COOLDOWNS (Items Mágicos / Gratuitos)
+    // SISTEMA DE COOLDOWNS Y CONSULTAS
     // ========================================================================================
 
     public boolean isCooldownActive(String itemId) {
@@ -121,20 +121,12 @@ public class Inventory {
         itemCooldowns.put(itemId, Instant.now().plus(duration, unit));
     }
 
-    // Método para la UI: "¿Puedo pedir el café gratis?"
     public boolean canUseSpecialItem(String itemId) {
-        // 1. Debo tenerlo desbloqueado (estar en ownedItems) O ser un servicio de tienda
-        // 2. No debe estar en cooldown
         return !isCooldownActive(itemId);
     }
 
-    // ========================================================================================
-    // CONSULTAS PARA ELDER QUESTS
-    // ========================================================================================
-
     public boolean hasPurchasedCategoryInLastDays(ItemCategory category, int days) {
         Instant threshold = Instant.now().minus(days, ChronoUnit.DAYS);
-
         return purchaseHistory.stream()
                 .filter(record -> record.timestamp.isAfter(threshold))
                 .anyMatch(record -> record.category == category);
@@ -142,12 +134,10 @@ public class Inventory {
 
     public boolean hasPurchasedItemInLastDays(String itemId, int days) {
         Instant threshold = Instant.now().minus(days, ChronoUnit.DAYS);
-
         return purchaseHistory.stream()
                 .filter(record -> record.timestamp.isAfter(threshold))
                 .anyMatch(record -> record.itemId.equals(itemId));
     }
 
-    // Record interno para el historial
     private record PurchaseRecord(String itemId, ItemCategory category, Instant timestamp) {}
 }
