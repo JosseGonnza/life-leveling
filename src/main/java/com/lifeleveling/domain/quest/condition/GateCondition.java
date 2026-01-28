@@ -17,6 +17,8 @@ package com.lifeleveling.domain.quest.condition;
  *   - BURNOUT_TRIGGER: Evento especial (3 burnouts en mes)
  *   - PAGES_READ: Páginas leídas en periodo específico
  *   - NO_BURNOUT: Sin entrar en burnout durante periodo activo
+ *   - DEBUFF_FREE_STREAK: Mantener 0 debuffs activos durante periodo consecutivo
+ *   - WEEKLY_QUESTS_COMPLETED: Semanas consecutivas con 100% Weekly Quests
  *
  * Filosofía:
  *   Cada condición es inmutable y puede evaluarse independientemente.
@@ -35,7 +37,9 @@ public sealed interface GateCondition
         TimeLimit,
         BurnoutTrigger,
         PagesRead,
-        NoBurnout {
+        NoBurnout,
+        DebuffFreeStreak,
+        WeeklyQuestsCompleted {
 
     /**
      * Evalúa si la condición está cumplida.

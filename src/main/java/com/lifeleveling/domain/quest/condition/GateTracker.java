@@ -42,6 +42,7 @@ public class GateTracker {
             int pagesRead,                // Páginas leídas ese día
             double careerHours,           // Horas trabajadas ese día
             boolean hadBurnout,           // ¿Entró en burnout?
+            boolean hadDebuffsActive,     // ¿Tuvo debuffs activos al final del día?
             List<String> consumablesBought, // IDs de items comprados
             Map<QuestRank, Integer> completedQuestsCount // Cuántas quests de cada rango hizo
     ) {}
@@ -189,4 +190,63 @@ public class GateTracker {
     public void clearTimeLimit(String gateId) {
         timeLimitStartDates.remove(gateId);
     }
+
+    // ========================================================================================
+    // NUEVOS MÉTODOS PARA ELDER_5 Y ELDER_6
+    // ========================================================================================
+
+    /**
+     * Calcula la racha actual de días sin debuffs activos.
+     * Cuenta hacia atrás desde ayer.
+     *
+     * @return Número de días consecutivos sin debuffs
+     */
+    public int getDebuffFreeStreak() {
+        LocalDate dateCursor = LocalDate.now().minusDays(1);
+        int streak = 0;
+
+        while (history.containsKey(dateCursor)) {
+            DailyHistory day = history.get(dateCursor);
+            if (!day.hadDebuffsActive()) {
+                streak++;
+                dateCursor = dateCursor.minusDays(1);
+            } else {
+                break; // Racha rota
+            }
+        }
+        return streak;
+    }
+
+    /**
+     * Calcula el número de semanas consecutivas con 100% Weekly Quests completadas.
+     * Cuenta hacia atrás desde la semana pasada.
+     *
+     * @return Número de semanas consecutivas con todas las Weekly Quests completadas
+     */
+    public int getConsecutiveWeeksWithFullWeeklies() {
+        return consecutiveWeeksWithFullWeeklies;
+    }
+
+    /**
+     * Registra el resultado de una semana de Weekly Quests.
+     *
+     * @param allCompleted true si se completaron 3/3 Weekly Quests esa semana
+     */
+    public void recordWeeklyQuestResult(boolean allCompleted) {
+        if (allCompleted) {
+            consecutiveWeeksWithFullWeeklies++;
+        } else {
+            consecutiveWeeksWithFullWeeklies = 0; // Reset de racha
+        }
+    }
+
+    /**
+     * Setter para reconstruir desde persistencia.
+     */
+    public void setConsecutiveWeeksWithFullWeeklies(int weeks) {
+        this.consecutiveWeeksWithFullWeeklies = weeks;
+    }
+
+    // Contador de semanas consecutivas con 100% Weekly Quests
+    private int consecutiveWeeksWithFullWeeklies = 0;
 }

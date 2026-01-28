@@ -1,7 +1,14 @@
 package com.lifeleveling.domain.quest;
 
 import com.lifeleveling.domain.player.StatType;
-import com.lifeleveling.domain.quest.condition.*;
+import com.lifeleveling.domain.quest.condition.ConsumableAbstinence;
+import com.lifeleveling.domain.quest.condition.DebuffFreeStreak;
+import com.lifeleveling.domain.quest.condition.GateCondition;
+import com.lifeleveling.domain.quest.condition.ManualConfirmation;
+import com.lifeleveling.domain.quest.condition.PagesRead;
+import com.lifeleveling.domain.quest.condition.PerfectDayStreak;
+import com.lifeleveling.domain.quest.condition.UserQuestsCompleted;
+import com.lifeleveling.domain.quest.condition.WeeklyQuestsCompleted;
 
 import java.util.List;
 import java.util.Map;
@@ -80,6 +87,52 @@ public enum ElderQuestType {
     ),
 
     /**
+     * ELDER_5: El Intocable (Perfect Health Management)
+     * Objetivo: 0 debuffs activos durante 30 días consecutivos.
+     *
+     * Debuffs a evitar: Fatiga, Caos, Pesadez, Taquicardia, Aburrimiento
+     *
+     * Recompensa según biblia:
+     *   - +30,000 XP General
+     *   - Título: "Mente de Acero" (Inmunidad al debuff "Caos" de por vida)
+     */
+    ELDER_5(
+            "🛡️",
+            "El Intocable",
+            "El caos no te toca. La fatiga no te alcanza. Eres una fortaleza impenetrable.",
+            ElderQuestFrequency.UNIQUE,
+            List.of(
+                    new DebuffFreeStreak(30)
+            ),
+            QuestReward.builder()
+                    .setGeneralXP(30_000)
+                    .build()
+    ),
+
+    /**
+     * ELDER_6: La Cruzada (Weekly Quest Mastery)
+     * Objetivo: 100% Weekly Quests (3/3) durante 4 semanas consecutivas.
+     *
+     * Total: 12 Weekly Quests completadas sin fallar ninguna semana.
+     *
+     * Recompensa según biblia:
+     *   - +50,000 XP General
+     *   - Item: "Llave Maestra" (Permite hacer "Reroll" de 1 Weekly Quest a la semana)
+     */
+    ELDER_6(
+            "⚔️",
+            "La Cruzada",
+            "La constancia no es hacerlo bien un día. Es hacerlo bien cuando nadie mira, semana tras semana.",
+            ElderQuestFrequency.UNIQUE,
+            List.of(
+                    new WeeklyQuestsCompleted(4)
+            ),
+            QuestReward.builder()
+                    .setGeneralXP(50_000)
+                    .build()
+    ),
+
+    /**
      * ELDER_7: La Ascensión (Consistency)
      * Objetivo: 20 Perfect Days en un mes.
      */
@@ -95,8 +148,6 @@ public enum ElderQuestType {
                     .setGeneralXP(40_000)
                     .build()
     );
-
-    // ... Faltan ELDER_5 y ELDER_6, se pueden añadir con la misma lógica
 
     private final String icon;
     private final String name;
