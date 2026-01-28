@@ -67,6 +67,9 @@ public enum StatType {
     private final String displayName;
     private final String description;
 
+    // Multiplicador base
+    private static final int XP_MULTIPLIER = 10;
+
     StatType(String icon, String displayName, String description) {
         this.icon = icon;
         this.displayName = displayName;
@@ -96,7 +99,7 @@ public enum StatType {
                     String.format("Nivel inválido: %d. Debe estar entre 1 y 99.", currentLevel)
             );
         }
-        return currentLevel * 100;
+        return currentLevel * XP_MULTIPLIER;
     }
 
     public static int getTotalXPForLevel(int targetLevel) {
@@ -110,7 +113,7 @@ public enum StatType {
             return 0; // Nivel 1 no requiere XP
         }
         // Fórmula de suma de serie aritmética: n(n-1)/2 × 100
-        return (targetLevel * (targetLevel - 1) * 100) / 2;
+        return (targetLevel * (targetLevel - 1) * XP_MULTIPLIER) / 2;
     }
 
     public boolean hasMasteryLevel(int currentLevel) {
