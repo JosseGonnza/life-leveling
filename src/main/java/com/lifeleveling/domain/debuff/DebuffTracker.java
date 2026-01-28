@@ -232,14 +232,40 @@ public class DebuffTracker {
         }
     }
 
-    // ========================================================================================
-    // UI HELPER
+// ========================================================================================
+    // FASE 10: UI HELPERS & WARNINGS
     // ========================================================================================
 
     public String getActiveDebuffsDisplay() {
         if (activeDebuffs.isEmpty()) return "Ninguno ✨";
+        Instant now = Instant.now();
         return activeDebuffs.stream()
-                .map(d -> d.getType().toDisplayString())
-                .collect(Collectors.joining(", "));
+                .map(d -> d.toDisplayString(now))
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    /**
+     * Devuelve una lista de advertencias basadas en los contadores actuales.
+     * Útil para mostrar en el Dashboard antes de que ocurra el desastre.
+     */
+    public List<String> getPendingWarnings() {
+        List<String> warnings = new ArrayList<>();
+
+        // Warning CHAOS (2 días sin Tidy -> Al 3º cae)
+        if (daysWithoutTidy == 2 && !hasDebuff(DebuffType.CHAOS)) {
+            warnings.add("🌪️ " + DebuffType.CHAOS.getWarningMessage());
+        }
+
+        // Warning TACHYCARDIA (2 Monsters esta semana -> Al 3º cae)
+        if (monstersConsumedWeekly == 2 && !hasDebuff(DebuffType.TACHYCARDIA)) {
+            warnings.add("💓 " + DebuffType.TACHYCARDIA.getWarningMessage());
+        }
+
+        // Warning BOREDOM (6 días trabajando -> Al 7º cae)
+        if (consecutiveWorkDays == 6 && !hasDebuff(DebuffType.BOREDOM)) {
+            warnings.add("😒 " + DebuffType.BOREDOM.getWarningMessage());
+        }
+
+        return warnings;
     }
 }

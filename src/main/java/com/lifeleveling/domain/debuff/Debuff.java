@@ -1,5 +1,6 @@
 package com.lifeleveling.domain.debuff;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -27,18 +28,34 @@ public class Debuff {
         return new Debuff(type, now, expiration, source);
     }
 
-    // Para TACHYCARDIA que expira el lunes, calcularemos la fecha exacta al crearlo en el Tracker
     public static Debuff createWithExpiration(DebuffType type, String source, Instant now, Instant expiresAt) {
         return new Debuff(type, now, expiresAt, source);
     }
 
     public boolean isExpired(Instant now) {
-        if (expiresAt == null) return false; // Indefinido (hasta cura manual)
+        if (expiresAt == null) return false;
         return now.isAfter(expiresAt);
     }
 
     public boolean isPermanent() {
         return expiresAt == null;
+    }
+
+    // [FASE 10] UI Helper: Formato bonito con tiempo restante
+    public String toDisplayString(Instant now) {
+        String base = type.getIcon() + " " + type.getDisplayName();
+
+        if (expiresAt != null) {
+            long minutesLeft = Duration.between(now, expiresAt).toMinutes();
+            if (minutesLeft > 0) {
+                long hours = minutesLeft / 60;
+                long mins = minutesLeft % 60;
+                return String.format("%s (%dh %dm)", base, hours, mins);
+            } else {
+                return base + " (Expirando...)";
+            }
+        }
+        return base; // Persistente (hasta cura manual)
     }
 
     public UUID getId() { return id; }
