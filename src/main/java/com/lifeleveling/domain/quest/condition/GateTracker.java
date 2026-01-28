@@ -4,136 +4,189 @@ import com.lifeleveling.domain.quest.QuestRank;
 import com.lifeleveling.domain.quest.SystemQuestType;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * GateTracker: Rastrea el progreso y eventos necesarios para evaluar condiciones de gates.
- *
- * Este tracker mantiene:
- *   - Historial de Daily Quests completadas
- *   - Historial de User Quests completadas
- *   - Eventos de HP (para detectar si cayó por debajo de umbrales)
- *   - Historial de compras de consumibles
- *   - Eventos de burnout
- *   - Confirmaciones manuales del jugador
- *   - Contadores activos (páginas leídas, horas de código, etc.)
- *
- * IMPORTANTE: Esta es la versión inicial placeholder.
- * Implementaremos toda la lógica de tracking en una fase posterior.
+ * GateTracker: El cerebro histórico del jugador.
+ * * Almacena resúmenes diarios (Snapshots) para poder calcular rachas, promedios
+ * y acumulados sin tener que recalcular desde cero cada vez.
  */
 public class GateTracker {
 
-    // Placeholder: Implementaremos estos métodos según necesidad
+    // Historial de días pasados (Clave: Fecha, Valor: Resumen del día)
+    private final TreeMap<LocalDate, DailyHistory> history = new TreeMap<>();
+
+    // Estado actual de Gates (Gates ya completadas)
+    private final Set<SystemQuestType> completedGates = new HashSet<>();
+
+    // Estado de confirmaciones manuales ("Checks" persistentes)
+    private final Set<String> manualConfirmations = new HashSet<>();
+
+    // Fechas de inicio para condiciones con TimeLimit
+    private final Map<String, LocalDate> timeLimitStartDates = new HashMap<>();
+
+    // Contadores en tiempo real (para el día actual/acumulados globales)
+    private double currentTotalCareerHours = 0.0;
+
+    // Constructor vacío
+    public GateTracker() {}
+
+    // ========================================================================================
+    // CLASE INTERNA: LA FOTO DEL DÍA (LO QUE SE PERSISTE)
+    // ========================================================================================
+    public record DailyHistory(
+            LocalDate date,
+            boolean perfectDayAchieved,   // ¿Hizo 7/7?
+            int minHP,                    // HP más bajo registrado ese día
+            int pagesRead,                // Páginas leídas ese día
+            double careerHours,           // Horas trabajadas ese día
+            boolean hadBurnout,           // ¿Entró en burnout?
+            List<String> consumablesBought, // IDs de items comprados
+            Map<QuestRank, Integer> completedQuestsCount // Cuántas quests de cada rango hizo
+    ) {}
+
+    // ========================================================================================
+    // MÉTODOS DE INGESTA (Para cargar datos desde DB o al cerrar el día)
+    // ========================================================================================
+
+    public void addDailyHistory(DailyHistory day) {
+        history.put(day.date(), day);
+        // También actualizamos acumulados globales si es necesario
+    }
+
+    public void markGateAsCompleted(SystemQuestType gateType) {
+        completedGates.add(gateType);
+    }
+
+    public void setTotalCareerHours(double hours) {
+        this.currentTotalCareerHours = hours;
+    }
+
+    // ========================================================================================
+    // LÓGICA DE NEGOCIO (Responde a las Condiciones)
+    // ========================================================================================
 
     /**
-     * Obtiene la racha actual de días perfectos (7/7 hábitos).
+     * Calcula la racha actual de Perfect Days contando hacia atrás desde ayer.
      */
     public int getPerfectDayStreak() {
-        return 0; // TODO: Implementar
+        LocalDate dateCursor = LocalDate.now().minusDays(1); // Empezamos a mirar desde ayer
+        int streak = 0;
+
+        while (history.containsKey(dateCursor)) {
+            DailyHistory day = history.get(dateCursor);
+            if (day.perfectDayAchieved()) {
+                streak++;
+                dateCursor = dateCursor.minusDays(1);
+            } else {
+                break; // Racha rota
+            }
+        }
+        return streak;
     }
 
     /**
      * Obtiene el HP mínimo registrado en los últimos N días.
      */
     public int getMinHPInLastDays(int days) {
-        return 100; // TODO: Implementar
+        LocalDate startDate = LocalDate.now().minusDays(days);
+
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(DailyHistory::minHP)
+                .min()
+                .orElse(100); // Si no hay datos, asumimos que estuvo sano (100)
     }
 
     /**
-     * Obtiene el número de User Quests de rango específico completadas en los últimos N días.
+     * Obtiene el número de User Quests de rango >= minRank completadas en los últimos N días.
      */
     public int getUserQuestsCompletedInLastDays(int days, QuestRank minRank) {
-        return 0; // TODO: Implementar
+        LocalDate startDate = LocalDate.now().minusDays(days);
+
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(day -> day.completedQuestsCount().entrySet().stream()
+                        .filter(entry -> entry.getKey().isAtLeast(minRank))
+                        .mapToInt(Map.Entry::getValue)
+                        .sum())
+                .sum();
     }
 
     /**
-     * Obtiene las horas totales acumuladas en Career Engine.
-     */
-    public double getTotalCareerEngineHours() {
-        return 0.0; // TODO: Implementar
-    }
-
-    /**
-     * Obtiene las páginas leídas en los últimos N días.
+     * Páginas leídas en los últimos N días.
      */
     public int getPagesReadInLastDays(int days) {
-        return 0; // TODO: Implementar
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(DailyHistory::pagesRead)
+                .sum();
     }
 
     /**
-     * Obtiene las páginas leídas por día en los últimos N días.
-     */
-    public List<Integer> getPagesReadByDay(int days) {
-        return List.of(); // TODO: Implementar
-    }
-
-    /**
-     * Verifica si se ha comprado un consumible específico en los últimos N días.
+     * Verifica si se compró un consumible específico en los últimos N días.
      */
     public boolean hasConsumablePurchaseInLastDays(String consumableId, int days) {
-        return false; // TODO: Implementar
+        LocalDate startDate = LocalDate.now().minusDays(days);
+
+        return history.tailMap(startDate).values().stream()
+                .anyMatch(day -> day.consumablesBought().contains(consumableId));
     }
 
     /**
-     * Obtiene el número de burnouts en el último mes.
+     * Burnouts acumulados en los últimos 30 días.
      */
     public int getBurnoutsInLastMonth() {
-        return 0; // TODO: Implementar
+        LocalDate startDate = LocalDate.now().minusDays(30);
+        return (int) history.tailMap(startDate).values().stream()
+                .filter(DailyHistory::hadBurnout)
+                .count();
     }
 
     /**
-     * Obtiene el número de días consecutivos con HP por encima de un umbral.
-     */
-    public int getConsecutiveDaysAboveHP(int threshold) {
-        return 0; // TODO: Implementar
-    }
-
-    /**
-     * Verifica si el jugador ha confirmado manualmente una condición.
-     */
-    public boolean hasManualConfirmation(String confirmationId) {
-        return false; // TODO: Implementar
-    }
-
-    /**
-     * Registra una confirmación manual del jugador.
-     */
-    public void setManualConfirmation(String confirmationId, boolean confirmed) {
-        // TODO: Implementar
-    }
-
-    /**
-     * Obtiene la fecha de inicio de una gate con límite de tiempo.
-     */
-    public LocalDate getTimeLimitStartDate(String gateId) {
-        return null; // TODO: Implementar
-    }
-
-    /**
-     * Establece la fecha de inicio de una gate con límite de tiempo.
-     */
-    public void setTimeLimitStartDate(String gateId, LocalDate startDate) {
-        // TODO: Implementar
-    }
-
-    /**
-     * Verifica si hubo burnout durante el periodo activo de una gate.
+     * Verifica si hubo burnout desde que se inició la Gate específica.
      */
     public boolean hadBurnoutDuringGate(String gateId) {
-        return false; // TODO: Implementar
+        LocalDate startDate = getTimeLimitStartDate(gateId);
+        if (startDate == null) return false; // No iniciada, no hay burnout
+
+        return history.tailMap(startDate).values().stream()
+                .anyMatch(DailyHistory::hadBurnout);
     }
 
-    /**
-     * Obtiene el oro total ganado históricamente (acumulado).
-     */
-    public int getHistoricalGoldEarned() {
-        return 0; // TODO: Implementar
+    public double getTotalCareerEngineHours() {
+        return currentTotalCareerHours;
     }
 
-    /**
-     * Verifica si una gate anterior está completada.
-     */
     public boolean isGateCompleted(SystemQuestType gateType) {
-        return false; // TODO: Implementar
+        return completedGates.contains(gateType);
+    }
+
+    // ========================================================================================
+    // GESTIÓN DE MANUAL CONFIRMATIONS & TIME LIMITS
+    // ========================================================================================
+
+    public boolean hasManualConfirmation(String confirmationId) {
+        return manualConfirmations.contains(confirmationId);
+    }
+
+    public void setManualConfirmation(String confirmationId, boolean confirmed) {
+        if (confirmed) {
+            manualConfirmations.add(confirmationId);
+        } else {
+            manualConfirmations.remove(confirmationId);
+        }
+    }
+
+    public LocalDate getTimeLimitStartDate(String gateId) {
+        return timeLimitStartDates.get(gateId);
+    }
+
+    public void setTimeLimitStartDate(String gateId, LocalDate startDate) {
+        timeLimitStartDates.put(gateId, startDate);
+    }
+
+    // Resetear el timer de una gate (útil si falla y reintenta)
+    public void clearTimeLimit(String gateId) {
+        timeLimitStartDates.remove(gateId);
     }
 }
