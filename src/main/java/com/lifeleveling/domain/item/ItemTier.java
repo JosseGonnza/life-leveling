@@ -17,4 +17,9 @@ public enum ItemTier {
     public boolean canEquip(int playerLevel) {
         return playerLevel >= minLevel;
     }
+
+    // [NUEVO] Necesario para mostrar el nombre en los logs de Milestones
+    public String getName() {
+        return name;
+    }
 }

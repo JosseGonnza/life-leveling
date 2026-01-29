@@ -39,12 +39,15 @@ public class Player {
     private final GateTracker gateTracker;
     private final CareerEngine careerEngine;
 
+    // [FASE 4] Tracker de Hitos
+    private final MilestoneTracker milestoneTracker;
+
     private BurnoutLock activeBurnoutLock;
 
     private Player(UUID id, String name, int currentHP, PlayerRank currentRank, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
                    DebuffTracker debuffTracker, GateTracker gateTracker,
-                   CareerEngine careerEngine,
+                   CareerEngine careerEngine, MilestoneTracker milestoneTracker, // [NUEVO]
                    BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
@@ -58,6 +61,7 @@ public class Player {
         this.debuffTracker = debuffTracker;
         this.gateTracker = gateTracker;
         this.careerEngine = careerEngine;
+        this.milestoneTracker = milestoneTracker; // [NUEVO]
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -73,88 +77,134 @@ public class Player {
                 PlayerRank.E,
                 Stats.initial(),
                 Wallet.empty(),
-                new Inventory(), new TitleInventory(), new DebuffTracker(), new GateTracker(), new CareerEngine(), null
+                new Inventory(),
+                new TitleInventory(),
+                new DebuffTracker(),
+                new GateTracker(),
+                new CareerEngine(),
+                new MilestoneTracker(), // [NUEVO] Inicializamos el tracker
+                null
         );
     }
 
     public static Player restore(UUID id, String name, int currentHP, PlayerRank rank, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
                                  DebuffTracker debuffTracker, GateTracker gateTracker,
-                                 CareerEngine careerEngine,
+                                 CareerEngine careerEngine, MilestoneTracker milestoneTracker, // [NUEVO]
                                  BurnoutLock lock) {
         return new Player(id, name, currentHP, rank, stats, wallet, inventory, titleInventory,
-                debuffTracker, gateTracker, careerEngine, lock);
+                debuffTracker, gateTracker, careerEngine, milestoneTracker, lock);
     }
 
     // ========================================================================================
-    // CICLO DIARIO & TRIGGERS AUTOMÁTICOS [FASE 2.1]
+    // LEVELING & XP (INTEGRACIÓN FASE 4)
+    // ========================================================================================
+
+    public int getLevel() {
+        long totalXP = stats.getTotalAccumulatedXP();
+        if (totalXP == 0) return 1;
+        int level = (int) Math.sqrt(totalXP / 45.0);
+        return Math.max(1, Math.min(level, 100));
+    }
+
+    public void addXP(StatType type, int amount) {
+        if (amount <= 0) return;
+
+        int oldLevel = getLevel(); // Capturamos nivel antes de añadir XP
+
+        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
+        double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
+        double titleMultiplier = titleInventory.getStatXPMultiplier(type);
+
+        double totalMultiplier = hpMultiplier * debuffGlobalMult * debuffStatMult * titleMultiplier;
+        int finalAmount = (int) Math.round(amount * totalMultiplier);
+
+        if (finalAmount > 0) {
+            this.stats = stats.addXP(type, finalAmount);
+            checkLevelUp(oldLevel); // [NUEVO] Verificamos level up
+        }
+    }
+
+    public void addGeneralXP(int amount) {
+        if (amount <= 0) return;
+
+        int oldLevel = getLevel(); // Capturamos nivel antes de añadir XP
+
+        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
+        double titleMultiplier = titleInventory.getGeneralXPMultiplier();
+        int finalAmount = (int) Math.round(amount * hpMultiplier * debuffGlobalMult * titleMultiplier);
+
+        if (finalAmount > 0) {
+            int perStat = finalAmount / StatType.values().length;
+            for (StatType type : StatType.values()) {
+                this.stats = stats.addXP(type, perStat);
+            }
+            checkLevelUp(oldLevel); // [NUEVO] Verificamos level up
+        }
+    }
+
+    /**
+     * [NUEVO] Verifica si el nivel ha subido y otorga Milestones.
+     */
+    private void checkLevelUp(int oldLevel) {
+        int newLevel = getLevel();
+        if (newLevel > oldLevel) {
+            System.out.println("🆙 ¡LEVEL UP! " + oldLevel + " -> " + newLevel);
+
+            // Delegamos al tracker la entrega de premios
+            List<MilestoneType> awards = milestoneTracker.checkAndAward(this);
+
+            if (!awards.isEmpty()) {
+                System.out.println("✨ Recompensas otorgadas: " + awards.size() + " hitos conseguidos.");
+            }
+        }
+    }
+
+    // ========================================================================================
+    // RESTO DE LA CLASE (Sin cambios lógicos, solo integración de getters)
     // ========================================================================================
 
     public void updateState(Instant now) {
-        // 1. Limpieza estándar
         gateTracker.resetDailyFlags();
         debuffTracker.cleanExpiredDebuffs(now);
         manageBurnoutState(now);
 
-        // 2. [NUEVO] Comprobación de Triggers automáticos (Castigos por dejadez)
-        // Consultamos al histórico para ver si hemos fallado en nuestros deberes
         int daysNoTidy = gateTracker.getDaysSinceLastQuestCompletion("TIDY");
         int workStreak = gateTracker.getConsecutiveWorkDays();
 
-        // El DebuffTracker actúa como juez
         List<Debuff> newDebuffs = debuffTracker.checkDailyResetTriggers(daysNoTidy, workStreak, now);
 
         for (Debuff db : newDebuffs) {
-            applyDebuffDirect(db); // Aplicamos y notificamos
+            applyDebuffDirect(db);
             System.out.println("⚠️ CASTIGO AUTOMÁTICO: " + db.getType().getDisplayName());
         }
 
-        // 3. Racha de pureza (Solo aumenta si no tienes debuffs activos ni burnout)
         if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
             gateTracker.incrementDebuffFreeStreak();
         } else {
-            gateTracker.notifyDebuffReceived(); // Reset streak
+            gateTracker.notifyDebuffReceived();
         }
     }
 
-    // ========================================================================================
-    // INTEGRACIÓN CON QUESTS (EVENTOS)
-    // ========================================================================================
-
-    /**
-     * [NUEVO] Método auxiliar para chequear triggers inmediatos tras completar una Quest.
-     * Debe ser llamado por el servicio/UI cuando una DailyQuest se completa.
-     * Ej: Completar SLEEP con < 6 horas -> Fatiga inmediata.
-     */
     public void notifyQuestCompleted(String questId, double inputValue) {
         Instant now = Instant.now();
-
-        // Trigger: FATIGUE (Si duermes poco)
         if ("SLEEP".equals(questId)) {
-            debuffTracker.checkSleepTrigger(inputValue, now)
-                    .ifPresent(this::applyDebuffDirect);
+            debuffTracker.checkSleepTrigger(inputValue, now).ifPresent(this::applyDebuffDirect);
         }
-
-        // Cura: CHAOS (Si completas TIDY, el caos desaparece)
         if ("TIDY".equals(questId) && debuffTracker.hasDebuff(DebuffType.CHAOS)) {
             debuffTracker.removeDebuff(DebuffType.CHAOS);
             System.out.println("✨ El orden ha restaurado tu mente. Adiós Caos.");
         }
     }
 
-    // Helper privado para aplicar debuff y notificar al tracker de rachas
     private void applyDebuffDirect(Debuff d) {
         debuffTracker.applyDebuff(d);
         gateTracker.notifyDebuffReceived();
     }
 
-    // ========================================================================================
-    // GESTIÓN DE RANGO
-    // ========================================================================================
-
-    public PlayerRank getCurrentRank() {
-        return currentRank;
-    }
+    public PlayerRank getCurrentRank() { return currentRank; }
 
     public void promoteToRank(PlayerRank newRank) {
         if (newRank == null) return;
@@ -164,10 +214,6 @@ public class Player {
                     " (Ingresos x" + newRank.getGoldMultiplier() + ")");
         }
     }
-
-    // ========================================================================================
-    // ECONOMÍA
-    // ========================================================================================
 
     public void addGold(int amount) {
         double rankMultiplier = currentRank.getGoldMultiplier();
@@ -186,48 +232,6 @@ public class Player {
         this.wallet = wallet.subtract(amount);
     }
 
-    // ========================================================================================
-    // LEVELING
-    // ========================================================================================
-
-    public int getLevel() {
-        long totalXP = stats.getTotalAccumulatedXP();
-        if (totalXP == 0) return 1;
-        int level = (int) Math.sqrt(totalXP / 45.0);
-        return Math.max(1, Math.min(level, 100));
-    }
-
-    public void addXP(StatType type, int amount) {
-        if (amount <= 0) return;
-        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
-        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
-        double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
-        double titleMultiplier = titleInventory.getStatXPMultiplier(type);
-
-        double totalMultiplier = hpMultiplier * debuffGlobalMult * debuffStatMult * titleMultiplier;
-        int finalAmount = (int) Math.round(amount * totalMultiplier);
-
-        if (finalAmount > 0) this.stats = stats.addXP(type, finalAmount);
-    }
-
-    public void addGeneralXP(int amount) {
-        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
-        double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
-        double titleMultiplier = titleInventory.getGeneralXPMultiplier();
-        int finalAmount = (int) Math.round(amount * hpMultiplier * debuffGlobalMult * titleMultiplier);
-
-        if (finalAmount > 0) {
-            int perStat = finalAmount / StatType.values().length;
-            for (StatType type : StatType.values()) {
-                this.stats = stats.addXP(type, perStat);
-            }
-        }
-    }
-
-    // ========================================================================================
-    // GESTIÓN DE SALUD (HP) Y DAÑO
-    // ========================================================================================
-
     public void heal(int amount) {
         int finalAmount = titleInventory.applyHPRecoveryBonus(amount);
         this.currentHP = Math.min(100, currentHP + finalAmount);
@@ -240,46 +244,27 @@ public class Player {
         if (this.currentHP == 0 && activeBurnoutLock == null) triggerBurnout();
     }
 
-    /**
-     * Aplica el daño por trabajo considerando la mitigación por hora del equipo.
-     * @param baseDamage El daño total calculado por CareerEngine (Horas * 3).
-     * @param hours Las horas trabajadas (necesarias para aplicar la tasa de mitigación).
-     */
     public void takeWorkDamage(int baseDamage, double hours) {
-        // 1. Obtener tasa de protección (ej: 1 HP/hora con ratón)
         int mitigationRate = inventory.getHourlyWorkDamageMitigation();
-
-        // 2. Calcular protección total (ej: 4 horas * 1 = 4 HP ahorrados)
         int totalMitigation = (int) Math.round(hours * mitigationRate);
-
-        // 3. Aplicar daño neto (Mínimo 0, el trabajo nunca cura)
         int finalDamage = Math.max(0, baseDamage - totalMitigation);
-
         takeDamage(finalDamage);
     }
 
-    /**
-     * Aplica el daño por sesión de Gimnasio.
-     * Base: 5 HP (Tarifa plana).
-     * Mitigado por Zapatillas Pegasus.
-     */
     public void takeGymDamage() {
-        int baseDamage = 5; // Constante Biblia
+        int baseDamage = 5;
         int mitigation = inventory.getGymDamageMitigation();
-
         int finalDamage = Math.max(0, baseDamage - mitigation);
-
         if (mitigation > 0 && finalDamage == 0) {
             System.out.println("👟 ¡Zapatillas Pegasus amortiguan todo el impacto! (-0 HP)");
         }
-
         takeDamage(finalDamage);
     }
 
     private void triggerBurnout() {
         this.activeBurnoutLock = BurnoutLock.createNow();
         this.wallet = wallet.applyBurnoutTax();
-        gateTracker.recordBurnoutToday(); // Memoria a corto plazo
+        gateTracker.recordBurnoutToday();
         System.out.println("💔 ¡BURNOUT! HP a 0. Bloqueo de 24h y multa aplicada.");
     }
 
@@ -287,24 +272,8 @@ public class Player {
         return activeBurnoutLock != null && !activeBurnoutLock.hasExpired(Instant.now());
     }
 
-    // ========================================================================================
-    // PERFECT DAY & BURNOUT STATE
-    // ========================================================================================
-
-    public void triggerPerfectDay() {
-        if (gateTracker.isPerfectDayAchievedToday()) return;
-
-        System.out.println("🌟 ¡PERFECT DAY! +100 XP, +100 G, HP MAX 🌟");
-        this.heal(100);
-        this.addGold(100);
-        this.addGeneralXP(100);
-        debuffTracker.applyPerfectDayCure();
-        gateTracker.setPerfectDayAchievedToday(true);
-    }
-
     private void manageBurnoutState(Instant now) {
         if (activeBurnoutLock == null || !activeBurnoutLock.hasExpired(now)) return;
-
         if (currentHP > 0) {
             System.out.println("🔥 Burnout superado. ¡Bienvenido de vuelta!");
             this.activeBurnoutLock = null;
@@ -318,9 +287,15 @@ public class Player {
         }
     }
 
-    // ========================================================================================
-    // DEBUFFS & ITEMS & CAREER
-    // ========================================================================================
+    public void triggerPerfectDay() {
+        if (gateTracker.isPerfectDayAchievedToday()) return;
+        System.out.println("🌟 ¡PERFECT DAY! +100 XP, +100 G, HP MAX 🌟");
+        this.heal(100);
+        this.addGold(100);
+        this.addGeneralXP(100);
+        debuffTracker.applyPerfectDayCure();
+        gateTracker.setPerfectDayAchievedToday(true);
+    }
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
         if (titleInventory.hasImmunityTo(type.name())) return;
@@ -333,35 +308,21 @@ public class Player {
         if (debuffTracker.hasDebuff(type)) debuffTracker.removeDebuff(type);
     }
 
-    public DebuffTracker getDebuffTracker() { return debuffTracker; }
-
     public void consumeItem(Item item) {
         if (!inventory.hasItem(item.id())) throw new IllegalStateException("No tienes este item: " + item.name());
         System.out.println("🥣 Consumiendo: " + item.name());
-
         if (item.hpRecovery() > 0) heal(item.hpRecovery());
         if (item.hpDamage() > 0) takeDamage(item.hpDamage());
-
-        // [NUEVO] Delegamos lógica compleja de triggers al tracker (ej: TACHYCARDIA por 3er Monster)
-        debuffTracker.checkItemConsumptionTrigger(item.id(), Instant.now())
-                .ifPresent(this::applyDebuffDirect);
-
-        // Lógica estándar del item (campos estáticos causesDebuff/curesDebuff)
+        debuffTracker.checkItemConsumptionTrigger(item.id(), Instant.now()).ifPresent(this::applyDebuffDirect);
         applyItemSideEffects(item);
-
         inventory.removeItem(item.id());
     }
 
     private void applyItemSideEffects(Item item) {
         Instant now = Instant.now();
-        // Aplica debuff si el item lo tiene configurado estáticamente (ej: Hamburguesa -> Pesadez)
-        if (item.causesDebuff().isPresent()) {
-            applyDebuff(item.causesDebuff().get(), "Consumo " + item.name(), now);
-        }
-        // Cura debuff si el item lo tiene configurado (ej: Almax -> Pesadez)
+        if (item.causesDebuff().isPresent()) applyDebuff(item.causesDebuff().get(), "Consumo " + item.name(), now);
         if (item.curesDebuff().isPresent()) {
             DebuffType debuffToCure = item.curesDebuff().get();
-            // Verificación extra para cafeína vs taquicardia
             if (item.isCaffeineSource() && !debuffTracker.canCureWithCaffeine()) {
                 System.out.println("💓 Tu corazón va a mil. Cafeína inefectiva.");
             } else {
@@ -373,7 +334,6 @@ public class Player {
     public void buyItem(Item item) { spendGold(item.price()); inventory.recordPurchase(item); }
     public void equipItem(String itemId) { inventory.equip(itemId); }
     public void unequipItem(com.lifeleveling.domain.item.ItemSlot slot) { inventory.unequip(slot); }
-    public Inventory getInventory() { return inventory; }
 
     public boolean unlockTitle(TitleType type) { return titleInventory.unlock(type); }
     public void equipTitle(TitleType type) { titleInventory.equip(type, getLevel()); }
@@ -381,7 +341,6 @@ public class Player {
     public void swapTitle(TitleType old, TitleType n) { titleInventory.swap(old, n, getLevel()); }
     public boolean hasTitle(TitleType type) { return titleInventory.hasTitle(type); }
     public boolean isTitleEquipped(TitleType type) { return titleInventory.isEquipped(type); }
-    public TitleInventory getTitleInventory() { return titleInventory; }
 
     public CodeSession registerCodeSession(double hours) {
         CodeSession session = careerEngine.registerSession(hours);
@@ -389,16 +348,20 @@ public class Player {
         addXP(StatType.INTELLECT, reward.intellectXP());
         addXP(StatType.DISCIPLINE, reward.disciplineXP());
         if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
-
-        // [FIX] Pasamos el coste base Y las horas para calcular la mitigación real
         takeWorkDamage(reward.hpCost(), hours);
-
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
         return session;
     }
 
     public boolean hasCodeActivityToday() { return careerEngine.hasActivityToday(); }
     public CareerEngine getCareerEngine() { return careerEngine; }
+    public Inventory getInventory() { return inventory; }
+    public TitleInventory getTitleInventory() { return titleInventory; }
+    public DebuffTracker getDebuffTracker() { return debuffTracker; }
+    public GateTracker getGateTracker() { return gateTracker; }
+
+    // [NUEVO] Getter para el MilestoneTracker
+    public MilestoneTracker getMilestoneTracker() { return milestoneTracker; }
 
     public int getCurrentHP() { return currentHP; }
     public int getCurrentGold() { return wallet.currentGold(); }
@@ -407,5 +370,4 @@ public class Player {
     public HPState getHpState() { return hpState; }
     public UUID getId() { return id; }
     public String getName() { return name; }
-    public GateTracker getGateTracker() { return gateTracker; }
 }
