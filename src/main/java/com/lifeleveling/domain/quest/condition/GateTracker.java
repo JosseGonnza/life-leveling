@@ -23,9 +23,13 @@ public class GateTracker {
     // --- CONTADORES EN TIEMPO REAL (STATEFUL) ---
     private double currentTotalCareerHours = 0.0;
 
-    // [FASE 9] Rachas vivas (se actualizan al momento, no solo al final del día)
+    // Rachas vivas
     private int consecutiveWeeksWithFullWeeklies = 0;
-    private int currentDebuffFreeStreak = 0; // Nueva variable de estado
+    private int currentDebuffFreeStreak = 0;
+
+    // [FASE 11] Cerrojo de Perfect Day (Memoria a corto plazo)
+    // Se resetea cada día a las 00:00
+    private boolean perfectDayAchievedToday = false;
 
     public GateTracker() {}
 
@@ -50,9 +54,6 @@ public class GateTracker {
 
     public void addDailyHistory(DailyHistory day) {
         history.put(day.date(), day);
-
-        // [FASE 9] Lógica de backup: Si por lo que sea el contador vivo falla,
-        // podríamos recalcular o validar aquí, pero confiamos en el update diario.
     }
 
     public void markGateAsCompleted(SystemQuestType gateType) {
@@ -64,38 +65,40 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // GESTIÓN DE RACHA DE DEBUFFS (FASE 9 - LIVE UPDATES)
+    // GESTIÓN DE PERFECT DAY (CERROJO) [FASE 11]
     // ========================================================================================
 
+    public boolean isPerfectDayAchievedToday() {
+        return perfectDayAchievedToday;
+    }
+
+    public void setPerfectDayAchievedToday(boolean achieved) {
+        this.perfectDayAchievedToday = achieved;
+    }
+
     /**
-     * Obtiene la racha actual de días sin debuffs.
-     * Es instantáneo y refleja si fallaste hoy.
+     * IMPORTANTE: Llamar a esto en el Daily Reset (00:00) para permitir ganar el premio mañana.
      */
+    public void resetDailyFlags() {
+        this.perfectDayAchievedToday = false;
+    }
+
+    // ========================================================================================
+    // GESTIÓN DE RACHA DE DEBUFFS
+    // ========================================================================================
+
     public int getDebuffFreeStreak() {
         return currentDebuffFreeStreak;
     }
 
-    /**
-     * [CRÍTICO] Se llama DESDE EL PLAYER/DEBUFF_TRACKER cuando se aplica un castigo.
-     * Rompe la racha inmediatamente.
-     */
     public void notifyDebuffReceived() {
-        if (this.currentDebuffFreeStreak > 0) {
-            // System.out.println("💔 Racha de pureza rota. Vuelves a 0 días."); // Log opcional
-        }
         this.currentDebuffFreeStreak = 0;
     }
 
-    /**
-     * Se llama al cierre del día (Daily Reset) si el jugador terminó limpio.
-     */
     public void incrementDebuffFreeStreak() {
         this.currentDebuffFreeStreak++;
     }
 
-    /**
-     * Setter para restaurar desde persistencia (JSON).
-     */
     public void setDebuffFreeStreak(int streak) {
         this.currentDebuffFreeStreak = streak;
     }
@@ -107,6 +110,8 @@ public class GateTracker {
     public int getPerfectDayStreak() {
         LocalDate dateCursor = LocalDate.now().minusDays(1);
         int streak = 0;
+
+        // 1. Historia pasada
         while (history.containsKey(dateCursor)) {
             if (history.get(dateCursor).perfectDayAchieved()) {
                 streak++;
@@ -115,6 +120,12 @@ public class GateTracker {
                 break;
             }
         }
+
+        // 2. [FASE 11] Si hoy ya lo conseguimos, lo sumamos visualmente a la racha actual
+        if (perfectDayAchievedToday) {
+            streak++;
+        }
+
         return streak;
     }
 
@@ -175,7 +186,6 @@ public class GateTracker {
     public void setTimeLimitStartDate(String id, LocalDate d) { timeLimitStartDates.put(id, d); }
     public void clearTimeLimit(String id) { timeLimitStartDates.remove(id); }
 
-    // Racha de Semanas (Elder Quest 6)
     public int getConsecutiveWeeksWithFullWeeklies() { return consecutiveWeeksWithFullWeeklies; }
     public void setConsecutiveWeeksWithFullWeeklies(int w) { this.consecutiveWeeksWithFullWeeklies = w; }
 
