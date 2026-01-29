@@ -59,7 +59,7 @@ public class Player {
     private Player(UUID id, String name, int currentHP, PlayerRank currentRank, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
                    DebuffTracker debuffTracker,
-                   TemporaryBuffTracker tempBuffTracker, // [NUEVO]
+                   TemporaryBuffTracker tempBuffTracker,
                    GateTracker gateTracker,
                    CareerEngine careerEngine,
                    MilestoneTracker milestoneTracker,
@@ -75,7 +75,7 @@ public class Player {
         this.inventory = inventory;
         this.titleInventory = titleInventory;
         this.debuffTracker = debuffTracker;
-        this.tempBuffTracker = tempBuffTracker; // [NUEVO]
+        this.tempBuffTracker = tempBuffTracker;
         this.gateTracker = gateTracker;
         this.careerEngine = careerEngine;
         this.milestoneTracker = milestoneTracker;
@@ -98,7 +98,7 @@ public class Player {
                 new Inventory(),
                 new TitleInventory(),
                 new DebuffTracker(),
-                new TemporaryBuffTracker(), // [NUEVO] Init
+                new TemporaryBuffTracker(),
                 new GateTracker(),
                 new CareerEngine(),
                 new MilestoneTracker(),
@@ -110,7 +110,7 @@ public class Player {
     public static Player restore(UUID id, String name, int currentHP, PlayerRank rank, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
                                  DebuffTracker debuffTracker,
-                                 TemporaryBuffTracker tempBuffTracker, // [NUEVO]
+                                 TemporaryBuffTracker tempBuffTracker,
                                  GateTracker gateTracker,
                                  CareerEngine careerEngine,
                                  MilestoneTracker milestoneTracker,
@@ -128,7 +128,7 @@ public class Player {
         // 1. Limpieza estándar diaria
         gateTracker.resetDailyFlags();
         debuffTracker.cleanExpiredDebuffs(now);
-        tempBuffTracker.cleanExpiredBuffs(now); // [NUEVO] Limpiar buffs expirados
+        tempBuffTracker.cleanExpiredBuffs(now);
         manageBurnoutState(now);
 
         // 2. Rotación Semanal
@@ -172,7 +172,7 @@ public class Player {
 
         applyItemSideEffects(item);
 
-        // [NUEVO] Aplicar Buff Temporal si el item lo tiene
+        // Aplicar Buff Temporal si el item lo tiene
         item.temporaryBuff().ifPresent(spec -> {
             tempBuffTracker.addBuff(spec, item.name(), now);
             System.out.println("⚡ Buff Activado: " + item.name());
@@ -195,7 +195,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // LEVELING (Con Buffs Temporales)
+    // LEVELING
     // ========================================================================================
 
     public void addXP(StatType type, int amount) {
@@ -207,11 +207,8 @@ public class Player {
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
         double titleMultiplier = titleInventory.getStatXPMultiplier(type);
-
-        // [NUEVO] Multiplicador Temporal (Consumibles)
         double tempBuffMultiplier = tempBuffTracker.getStatXPMultiplier(type, Instant.now());
 
-        // Cálculo Total
         double totalMultiplier = hpMultiplier * debuffGlobalMult * debuffStatMult * titleMultiplier * tempBuffMultiplier;
         int finalAmount = (int) Math.round(amount * totalMultiplier);
 
@@ -222,11 +219,53 @@ public class Player {
     }
 
     // ========================================================================================
-    // RESTO DE MÉTODOS (Mantener igual que antes)
+    // OTROS (Career, Sleep, etc.)
     // ========================================================================================
-    // Copia aquí el resto de métodos tal como estaban:
-    // addGeneralXP, notifyQuestCompleted, heal, takeDamage, etc.
-    // Solo asegúrate de añadir el getter nuevo:
+
+    public CodeSession registerCodeSession(double hours) {
+        CodeSession session = careerEngine.registerSession(hours);
+        CareerReward reward = session.getReward();
+        addXP(StatType.INTELLECT, reward.intellectXP());
+        addXP(StatType.DISCIPLINE, reward.disciplineXP());
+        if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
+        takeWorkDamage(reward.hpCost(), hours);
+        gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
+        notifyQuestCompleted("CODE", hours);
+        return session;
+    }
+
+    /**
+     * [NUEVO FASE 3.1] Registra una sesión de sueño y aplica las recompensas.
+     * Aplica automáticamente el bonus del Colchón Premium si está equipado.
+     */
+    public void registerSleepSession(int hours) {
+        if (hours <= 0) return;
+
+        // 1. Calcular XP Base (Regla: 50 XP/hora hasta 8h)
+        int baseXP = Math.min(hours, 8) * 50;
+
+        // 2. Aplicar Multiplicador de Item (Colchón)
+        double itemMultiplier = inventory.getSleepXPMultiplier();
+        int finalXP = (int) (baseXP * itemMultiplier);
+
+        // 3. Aplicar al Stat correspondiente (CHARISMA = Beauty Sleep)
+        addXP(StatType.CHARISMA, finalXP);
+
+        // 4. Recuperación de HP (Lógica estándar + Bonus Títulos)
+        int hpRecovery = hours * 5; // 5 HP/h base
+        heal(hpRecovery);
+
+        // 5. Notificar eventos (Weekly Quests, Debuffs, Rachas)
+        notifyQuestCompleted("SLEEP", hours);
+
+        if (itemMultiplier > 1.0) {
+            System.out.println("🛏️ ¡Descanso Premium! XP x" + itemMultiplier);
+        }
+    }
+
+    // ========================================================================================
+    // RESTO DE MÉTODOS (Getters, Helpers, etc.)
+    // ========================================================================================
 
     public TemporaryBuffTracker getTempBuffTracker() { return tempBuffTracker; }
 
@@ -237,7 +276,6 @@ public class Player {
         return Math.max(1, Math.min(level, 100));
     }
 
-    // ... (Métodos de soporte checkLevelUp, applyQuestReward, etc. idénticos a la versión anterior)
     private void checkLevelUp(int oldLevel) {
         int newLevel = getLevel();
         if (newLevel > oldLevel) {
@@ -265,7 +303,6 @@ public class Player {
         }
     }
 
-    // Hooks
     public void notifyQuestCompleted(String questId, double inputValue) {
         Instant now = Instant.now();
         LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
@@ -294,7 +331,6 @@ public class Player {
         gateTracker.notifyDebuffReceived();
     }
 
-    // Getters
     public PlayerRank getCurrentRank() { return currentRank; }
     public void promoteToRank(PlayerRank newRank) {
         if (newRank == null) return;
@@ -392,17 +428,6 @@ public class Player {
     public void swapTitle(TitleType old, TitleType n) { titleInventory.swap(old, n, getLevel()); }
     public boolean hasTitle(TitleType type) { return titleInventory.hasTitle(type); }
     public boolean isTitleEquipped(TitleType type) { return titleInventory.isEquipped(type); }
-    public CodeSession registerCodeSession(double hours) {
-        CodeSession session = careerEngine.registerSession(hours);
-        CareerReward reward = session.getReward();
-        addXP(StatType.INTELLECT, reward.intellectXP());
-        addXP(StatType.DISCIPLINE, reward.disciplineXP());
-        if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
-        takeWorkDamage(reward.hpCost(), hours);
-        gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
-        notifyQuestCompleted("CODE", hours);
-        return session;
-    }
     public boolean hasCodeActivityToday() { return careerEngine.hasActivityToday(); }
     public CareerEngine getCareerEngine() { return careerEngine; }
     public Inventory getInventory() { return inventory; }

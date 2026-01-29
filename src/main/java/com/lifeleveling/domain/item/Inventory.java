@@ -142,6 +142,18 @@ public class Inventory {
     }
 
     /**
+     * [NUEVO FASE 3.1] Calcula el multiplicador de XP para la quest SLEEP.
+     * Base: 1.0
+     * Con Colchón Premium (gear_mattress): 2.0 (+100%)
+     */
+    public double getSleepXPMultiplier() {
+        if (isEquipped("gear_mattress")) {
+            return 2.0;
+        }
+        return 1.0;
+    }
+
+    /**
      * Helper privado para verificar si llevamos puesto un item concreto por ID.
      */
     private boolean isEquipped(String itemId) {
