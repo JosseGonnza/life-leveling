@@ -22,9 +22,12 @@ public record Item(
         boolean isConsumable,
         boolean isHidden, // Item secreto/desbloqueable
 
-        // Nuevos campos para el Sistema de Debuffs
+        // Campos para el Sistema de Debuffs
         Optional<DebuffType> causesDebuff, // El item aplica este castigo al consumirse
-        Optional<DebuffType> curesDebuff   // El item cura este castigo al consumirse
+        Optional<DebuffType> curesDebuff,  // El item cura este castigo al consumirse
+
+        // [NUEVO] Campo para Buffs Temporales (Fase 2.1)
+        Optional<TemporaryBuffSpec> temporaryBuff
 ) {
     public Item {
         Objects.requireNonNull(id);
@@ -32,8 +35,9 @@ public record Item(
         Objects.requireNonNull(tier);
         Objects.requireNonNull(slot);
         Objects.requireNonNull(category);
-        Objects.requireNonNull(causesDebuff); // Prevenir nulls en los Optional
+        Objects.requireNonNull(causesDebuff);
         Objects.requireNonNull(curesDebuff);
+        Objects.requireNonNull(temporaryBuff); // [NUEVO] Prevenir nulls
 
         if (price < 0) throw new IllegalArgumentException("El precio no puede ser negativo");
         if (statBonuses == null) statBonuses = Collections.emptyMap();
@@ -48,7 +52,8 @@ public record Item(
         return new Item(
                 id, name, "", price, tier, slot, cat, bonuses,
                 0, 0, false, false,
-                Optional.empty(), Optional.empty() // No causan ni curan debuffs
+                Optional.empty(), Optional.empty(),
+                Optional.empty() // [NUEVO] Sin buff temporal
         );
     }
 
@@ -57,27 +62,39 @@ public record Item(
         return new Item(
                 id, name, "", price, ItemTier.CONSUMABLE, ItemSlot.NONE, cat, Map.of(),
                 hpRec, hpDmg, true, false,
-                Optional.empty(), Optional.empty()
+                Optional.empty(), Optional.empty(),
+                Optional.empty() // [NUEVO]
         );
     }
 
     // Consumible Medicinal (Cura un Debuff)
-    // Ej: Almax -> Cura HEAVINESS
     public static Item createMedicine(String id, String name, int price, int hpRec, DebuffType cures) {
         return new Item(
                 id, name, "Medicamento", price, ItemTier.CONSUMABLE, ItemSlot.NONE, ItemCategory.MEDICINE, Map.of(),
                 hpRec, 0, true, false,
-                Optional.empty(), Optional.of(cures)
+                Optional.empty(), Optional.of(cures),
+                Optional.empty() // [NUEVO]
         );
     }
 
     // Consumible Tóxico/Tentación (Causa un Debuff)
-    // Ej: Hamburguesa -> Causa HEAVINESS
     public static Item createTemptation(String id, String name, int price, int hpRec, DebuffType causes) {
         return new Item(
                 id, name, "Delicioso pero peligroso", price, ItemTier.CONSUMABLE, ItemSlot.NONE, ItemCategory.FOOD_JUNK, Map.of(),
                 hpRec, 0, true, false,
-                Optional.of(causes), Optional.empty()
+                Optional.of(causes), Optional.empty(),
+                Optional.empty() // [NUEVO]
+        );
+    }
+
+    // [NUEVO] Consumible Potenciador (Otorga Buff Temporal)
+    // Ej: "Nootrópico" -> +20% INT por 2 horas
+    public static Item createPowerUp(String id, String name, int price, TemporaryBuffSpec buffSpec) {
+        return new Item(
+                id, name, "Potenciador temporal", price, ItemTier.CONSUMABLE, ItemSlot.NONE, ItemCategory.SUPPLEMENT, Map.of(),
+                0, 0, true, false,
+                Optional.empty(), Optional.empty(),
+                Optional.of(buffSpec) // [NUEVO] Con buff
         );
     }
 
@@ -86,7 +103,8 @@ public record Item(
         return new Item(
                 id, name, description, price, ItemTier.TIER_3, ItemSlot.NONE, ItemCategory.TREASURE, Map.of(),
                 0, 0, false, false,
-                Optional.empty(), Optional.empty()
+                Optional.empty(), Optional.empty(),
+                Optional.empty() // [NUEVO]
         );
     }
 
@@ -95,7 +113,8 @@ public record Item(
         return new Item(
                 id, name, description, 0, ItemTier.TIER_3, slot, ItemCategory.ARTIFACT, Map.of(),
                 0, 0, false, true,
-                Optional.empty(), Optional.empty()
+                Optional.empty(), Optional.empty(),
+                Optional.empty() // [NUEVO]
         );
     }
 
@@ -111,12 +130,15 @@ public record Item(
         return curesDebuff.isPresent();
     }
 
+    // [NUEVO] Helper
+    public boolean hasTemporaryBuff() {
+        return temporaryBuff.isPresent();
+    }
+
     /**
      * Identifica si el item es una fuente de cafeína potente.
-     * Importante para la lógica de Taquicardia (el café no cura si ya tienes taquicardia).
      */
     public boolean isCaffeineSource() {
-        // Lógica "Hardcoded" segura: detectamos por ID o Categoría + Nombre
         return category == ItemCategory.DRINK_ENERGY ||
                 (category == ItemCategory.DRINK_SOCIAL && id.toLowerCase().contains("cafe"));
     }
@@ -127,6 +149,10 @@ public record Item(
 
         if (causesDebuff.isPresent()) {
             base += " ⚠️ " + causesDebuff.get().getDisplayName();
+        }
+        // [NUEVO] Indicador visual si tiene buff (opcional)
+        if (temporaryBuff.isPresent()) {
+            base += " ⚡ Buff";
         }
         return base;
     }

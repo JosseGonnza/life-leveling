@@ -3,6 +3,7 @@ package com.lifeleveling.domain.item;
 import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.player.StatType;
 
+import java.time.Duration; // [NUEVO] Necesario para los buffs
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,13 +23,13 @@ public class ItemCatalog {
     public static final Item PJ_PANTS = register(new Item(
             "gear_pj_pants", "Pantalón Pijama", "Comodidad +100. Dignidad -50.", 500,
             ItemTier.TIER_1, ItemSlot.LEGS, ItemCategory.CLOTHING, Map.of(),
-            1, 0, false, false, Optional.empty(), Optional.empty()
+            1, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // +1 HP Recup
 
     public static final Item BEAR_SLIPPERS = register(new Item(
             "gear_slippers", "Pantuflas de Oso", "Calentitas.", 800,
             ItemTier.TIER_1, ItemSlot.FEET, ItemCategory.CLOTHING, Map.of(),
-            1, 0, false, false, Optional.empty(), Optional.empty()
+            1, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // +1 HP Recup
 
     public static final Item DEV_SHIRT = register(Item.createEquip(
@@ -64,7 +65,7 @@ public class ItemCatalog {
     public static final Item WEIGHTED_BLANKET = register(new Item(
             "gear_blanket", "Manta Pesada", "Te abraza cuando nadie más lo hace.", 4000,
             ItemTier.TIER_1, ItemSlot.BED, ItemCategory.FURNITURE, Map.of(),
-            3, 0, false, false, Optional.empty(), Optional.empty()
+            3, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // +3 HP Recup
 
     public static final Item NEON_LIGHT = register(Item.createEquip(
@@ -111,7 +112,7 @@ public class ItemCatalog {
     public static final Item VISCO_PILLOW = register(new Item(
             "gear_pillow", "Almohada Visco", "Tu cuello deja de crujir.", 8000,
             ItemTier.TIER_2, ItemSlot.BED, ItemCategory.FURNITURE, Map.of(),
-            5, 0, false, false, Optional.empty(), Optional.empty()
+            5, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // +5 HP Recup
 
     public static final Item WHITEBOARD = register(Item.createEquip(
@@ -122,7 +123,7 @@ public class ItemCatalog {
     public static final Item AIR_FRYER = register(new Item(
             "gear_airfryer", "Air Fryer", "Pollo crujiente sin aceite. Magia negra.", 10000,
             ItemTier.TIER_2, ItemSlot.KITCHEN, ItemCategory.FURNITURE, Map.of(),
-            5, 0, false, false, Optional.empty(), Optional.empty()
+            5, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // Dieta da +5 HP extra
 
 
@@ -199,7 +200,7 @@ public class ItemCatalog {
     public static final Item MATTRESS_PRO = register(new Item(
             "gear_mattress", "Colchón Premium", "Dormir aquí es viajar en el tiempo.", 100000,
             ItemTier.TIER_3, ItemSlot.BED, ItemCategory.FURNITURE, Map.of(),
-            0, 0, false, false, Optional.empty(), Optional.empty()
+            0, 0, false, false, Optional.empty(), Optional.empty(), Optional.empty()
     )); // Effect: +100% XP Dormir.
 
     // ========================================================================================
@@ -211,9 +212,10 @@ public class ItemCatalog {
             "consumable_espresso", "Espresso Shot", 80, ItemCategory.DRINK_SOCIAL, 5, 0
     ));
 
-    public static final Item PROTEIN_BAR = register(Item.createConsumable(
-            "consumable_bar", "Barrita de Proteína", 150, ItemCategory.FOOD_HEALTHY, 2, 0
-            // Nota: +5% STR XP Temporal gestionado en Player
+    // [ACTUALIZADO] Barrita ahora es un PowerUp (+5% STR 1h)
+    public static final Item PROTEIN_BAR = register(Item.createPowerUp(
+            "consumable_bar", "Barrita de Proteína", 150,
+            TemporaryBuffSpec.of(StatType.STRENGTH, 0.05, Duration.ofHours(1))
     ));
 
     public static final Item LATTE_XL = register(Item.createConsumable(
@@ -236,22 +238,26 @@ public class ItemCatalog {
             "consumable_coffee_pro", "Café Premium", 1000, ItemCategory.DRINK_SOCIAL, 50, 0
     ));
 
-    // B. Drogas de Rendimiento (Buffs)
-    public static final Item GUM_MINT = register(Item.createConsumable(
-            "buff_gum", "Chicle de Menta", 50, ItemCategory.MEDICINE, 0, 0
-    )); // +5% CHA XP (30m)
+    // B. Drogas de Rendimiento (Buffs Temporales) - [ACTUALIZADO FASE 2.2]
+    public static final Item GUM_MINT = register(Item.createPowerUp(
+            "buff_gum", "Chicle de Menta", 50,
+            TemporaryBuffSpec.of(StatType.CHARISMA, 0.05, Duration.ofMinutes(30))
+    ));
 
-    public static final Item BINAURAL_BEATS = register(Item.createConsumable(
-            "buff_binaural", "Binaural Beats (App)", 100, ItemCategory.MEDICINE, 0, 0
-    )); // +10% WIS XP (1h)
+    public static final Item BINAURAL_BEATS = register(Item.createPowerUp(
+            "buff_binaural", "Binaural Beats (App)", 100,
+            TemporaryBuffSpec.of(StatType.WISDOM, 0.10, Duration.ofHours(1))
+    ));
 
-    public static final Item PRE_WORKOUT = register(Item.createConsumable(
-            "buff_preworkout", "Pre-Workout", 350, ItemCategory.MEDICINE, 0, 0
-    )); // +20% STR XP (1h)
+    public static final Item PRE_WORKOUT = register(Item.createPowerUp(
+            "buff_preworkout", "Pre-Workout", 350,
+            TemporaryBuffSpec.of(StatType.STRENGTH, 0.20, Duration.ofHours(1))
+    ));
 
-    public static final Item NOOTROPIC = register(Item.createConsumable(
-            "buff_nootropic", "Nootrópico 'Focus'", 400, ItemCategory.MEDICINE, 0, 0
-    )); // +20% INT XP (2h)
+    public static final Item NOOTROPIC = register(Item.createPowerUp(
+            "buff_nootropic", "Nootrópico 'Focus'", 400,
+            TemporaryBuffSpec.of(StatType.INTELLECT, 0.20, Duration.ofHours(2))
+    ));
 
     // C. Curas y Antídotos
     public static final Item ALMAX = register(Item.createMedicine(
