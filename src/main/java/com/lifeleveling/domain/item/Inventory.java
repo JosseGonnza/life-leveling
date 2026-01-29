@@ -38,7 +38,7 @@ public class Inventory {
     }
 
     /**
-     * [NUEVO] Método necesario para consumir items.
+     * Método necesario para consumir items.
      * Elimina una instancia del item del inventario.
      */
     public void removeItem(String itemId) {
@@ -90,7 +90,7 @@ public class Inventory {
     }
 
     // ========================================================================================
-    // CÁLCULO DE STATS
+    // CÁLCULO DE STATS & EFECTOS ESPECIALES [FASE 1.3]
     // ========================================================================================
 
     public Map<StatType, Integer> getTotalStatBonuses() {
@@ -104,8 +104,49 @@ public class Inventory {
         return totalBonuses;
     }
 
-    public int getTotalDamageMitigation() {
-        return 0; // Implementar lógica futura aquí si es necesario
+    /**
+     * Calcula cuántos HP te ahorras POR HORA de trabajo gracias al equipo.
+     * IDs según ItemCatalog.
+     */
+    public int getHourlyWorkDamageMitigation() {
+        int mitigation = 0;
+
+        // 1. Periféricos (Ratón Ergonómico reduce 1 HP/h)
+        if (isEquipped("gear_mouse")) {
+            mitigation += 1;
+        }
+
+        // 2. Sillas
+        // Herman Miller anula el coste base de 3 HP/h
+        if (isEquipped("gear_chair_herman")) {
+            mitigation += 3;
+        }
+        // Sillas de gama media (Markus) reducen 1 HP/h
+        else if (isEquipped("gear_chair_markus")) {
+            mitigation += 1;
+        }
+
+        return mitigation;
+    }
+
+    /**
+     * Calcula cuántos HP te ahorras por sesión de GYM.
+     * Daño Base Gym = 5 HP.
+     */
+    public int getGymDamageMitigation() {
+        // gear_shoes_run (Pegasus): Gym cuesta 0 HP -> Mitiga 5
+        if (isEquipped("gear_shoes_run")) {
+            return 5;
+        }
+        return 0;
+    }
+
+    /**
+     * Helper privado para verificar si llevamos puesto un item concreto por ID.
+     */
+    private boolean isEquipped(String itemId) {
+        return equippedItems.values().stream()
+                .anyMatch(i -> i.id().equals(itemId));
     }
 
     // ========================================================================================

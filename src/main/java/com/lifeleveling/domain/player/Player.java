@@ -162,7 +162,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // GESTIÓN DE SALUD (HP)
+    // GESTIÓN DE SALUD (HP) Y DAÑO
     // ========================================================================================
 
     public void heal(int amount) {
@@ -177,23 +177,46 @@ public class Player {
         if (this.currentHP == 0 && activeBurnoutLock == null) triggerBurnout();
     }
 
-    public void takeWorkDamage(int baseDamage) {
-        int mitigation = inventory.getTotalDamageMitigation();
+    /**
+     * Aplica el daño por trabajo considerando la mitigación por hora del equipo.
+     * @param baseDamage El daño total calculado por CareerEngine (Horas * 3).
+     * @param hours Las horas trabajadas (necesarias para aplicar la tasa de mitigación).
+     */
+    public void takeWorkDamage(int baseDamage, double hours) {
+        // 1. Obtener tasa de protección (ej: 1 HP/hora con ratón)
+        int mitigationRate = inventory.getHourlyWorkDamageMitigation();
+
+        // 2. Calcular protección total (ej: 4 horas * 1 = 4 HP ahorrados)
+        int totalMitigation = (int) Math.round(hours * mitigationRate);
+
+        // 3. Aplicar daño neto (Mínimo 0, el trabajo nunca cura)
+        int finalDamage = Math.max(0, baseDamage - totalMitigation);
+
+        takeDamage(finalDamage);
+    }
+
+    /**
+     * Aplica el daño por sesión de Gimnasio.
+     * Base: 5 HP (Tarifa plana).
+     * Mitigado por Zapatillas Pegasus.
+     */
+    public void takeGymDamage() {
+        int baseDamage = 5; // Constante Biblia
+        int mitigation = inventory.getGymDamageMitigation();
+
         int finalDamage = Math.max(0, baseDamage - mitigation);
+
+        if (mitigation > 0 && finalDamage == 0) {
+            System.out.println("👟 ¡Zapatillas Pegasus amortiguan todo el impacto! (-0 HP)");
+        }
+
         takeDamage(finalDamage);
     }
 
     private void triggerBurnout() {
-        // 1. Crear el bloqueo
         this.activeBurnoutLock = BurnoutLock.createNow();
-
-        // 2. Aplicar multa económica
         this.wallet = wallet.applyBurnoutTax();
-
-        // 3. [NUEVO] Registrar el evento en el historial HOY
-        // Esto permite a GateTracker detectar 3 burnouts/mes al instante
         gateTracker.recordBurnoutToday();
-
         System.out.println("💔 ¡BURNOUT! HP a 0. Bloqueo de 24h y multa aplicada.");
     }
 
@@ -202,7 +225,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // PERFECT DAY
+    // PERFECT DAY & CICLO
     // ========================================================================================
 
     public void triggerPerfectDay() {
@@ -216,12 +239,8 @@ public class Player {
         gateTracker.setPerfectDayAchievedToday(true);
     }
 
-    // ========================================================================================
-    // CICLO DIARIO
-    // ========================================================================================
-
     public void updateState(Instant now) {
-        gateTracker.resetDailyFlags(); // Resetea perfectDay y burnoutToday
+        gateTracker.resetDailyFlags();
         debuffTracker.cleanExpiredDebuffs(now);
         manageBurnoutState(now);
         if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
@@ -246,7 +265,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // DEBUFFS
+    // DEBUFFS & ITEMS & CAREER
     // ========================================================================================
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
@@ -261,10 +280,6 @@ public class Player {
     }
 
     public DebuffTracker getDebuffTracker() { return debuffTracker; }
-
-    // ========================================================================================
-    // ITEMS & CAREER
-    // ========================================================================================
 
     public void consumeItem(Item item) {
         if (!inventory.hasItem(item.id())) throw new IllegalStateException("No tienes este item: " + item.name());
@@ -316,7 +331,10 @@ public class Player {
         addXP(StatType.INTELLECT, reward.intellectXP());
         addXP(StatType.DISCIPLINE, reward.disciplineXP());
         if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
-        takeWorkDamage(reward.hpCost());
+
+        // [FIX] Pasamos el coste base Y las horas para calcular la mitigación real
+        takeWorkDamage(reward.hpCost(), hours);
+
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
         return session;
     }
