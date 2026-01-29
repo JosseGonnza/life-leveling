@@ -28,8 +28,10 @@ public class GateTracker {
     private int currentDebuffFreeStreak = 0;
 
     // [FASE 11] Cerrojo de Perfect Day (Memoria a corto plazo)
-    // Se resetea cada día a las 00:00
     private boolean perfectDayAchievedToday = false;
+
+    // [FASE 1.2] Flag para Burnout ocurrido HOY (Memoria a corto plazo)
+    private boolean burnoutOccurredToday = false;
 
     public GateTracker() {}
 
@@ -65,7 +67,7 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // GESTIÓN DE PERFECT DAY (CERROJO) [FASE 11]
+    // GESTIÓN DE PERFECT DAY & FLAGS DIARIOS
     // ========================================================================================
 
     public boolean isPerfectDayAchievedToday() {
@@ -77,10 +79,29 @@ public class GateTracker {
     }
 
     /**
-     * IMPORTANTE: Llamar a esto en el Daily Reset (00:00) para permitir ganar el premio mañana.
+     * IMPORTANTE: Llamar a esto en el Daily Reset (00:00) para limpiar memoria a corto plazo.
      */
     public void resetDailyFlags() {
         this.perfectDayAchievedToday = false;
+        this.burnoutOccurredToday = false; // [NUEVO] Reseteamos el flag de burnout diario
+    }
+
+    // ========================================================================================
+    // GESTIÓN DE BURNOUT (FASE 1.2)
+    // ========================================================================================
+
+    /**
+     * Registra que ha ocurrido un Burnout HOY.
+     * Llamado desde Player.triggerBurnout().
+     */
+    public void recordBurnoutToday() {
+        this.burnoutOccurredToday = true;
+        // Al quemarse, también se rompe la racha de pureza inmediatamente
+        notifyDebuffReceived();
+    }
+
+    public boolean didBurnoutOccurToday() {
+        return burnoutOccurredToday;
     }
 
     // ========================================================================================
@@ -121,7 +142,7 @@ public class GateTracker {
             }
         }
 
-        // 2. [FASE 11] Si hoy ya lo conseguimos, lo sumamos visualmente a la racha actual
+        // 2. Si hoy ya lo conseguimos, lo sumamos visualmente
         if (perfectDayAchievedToday) {
             streak++;
         }
@@ -159,15 +180,34 @@ public class GateTracker {
 
     public int getBurnoutsInLastMonth() {
         LocalDate startDate = LocalDate.now().minusDays(30);
-        return (int) history.tailMap(startDate).values().stream()
-                .filter(DailyHistory::hadBurnout).count();
+
+        // 1. Contar históricos (ayer hacia atrás)
+        int count = (int) history.tailMap(startDate).values().stream()
+                .filter(DailyHistory::hadBurnout)
+                .count();
+
+        // 2. [FIX] Sumar el de hoy si acaba de ocurrir
+        if (burnoutOccurredToday) {
+            count++;
+        }
+
+        return count;
     }
 
     public boolean hadBurnoutDuringGate(String gateId) {
         LocalDate startDate = getTimeLimitStartDate(gateId);
         if (startDate == null) return false;
-        return history.tailMap(startDate).values().stream()
+
+        // Revisar histórico
+        boolean historicBurnout = history.tailMap(startDate).values().stream()
                 .anyMatch(DailyHistory::hadBurnout);
+
+        // Revisar hoy (si la gate empezó hoy o antes)
+        if (burnoutOccurredToday && !LocalDate.now().isBefore(startDate)) {
+            return true;
+        }
+
+        return historicBurnout;
     }
 
     // ========================================================================================
