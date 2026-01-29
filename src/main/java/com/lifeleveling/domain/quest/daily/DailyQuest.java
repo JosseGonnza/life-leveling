@@ -368,6 +368,10 @@ public final class DailyQuest implements Quest {
     }
 
     public int getHPEffect() {
+        // [FIX] Lógica dinámica para SLEEP
+        if (type == DailyQuestType.SLEEP && integerInput != null) {
+            return type.calculateDynamicHP(integerInput);
+        }
         return type.getHpEffect();
     }
 
