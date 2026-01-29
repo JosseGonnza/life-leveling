@@ -52,14 +52,23 @@ public enum DailyQuestType {
 
     /**
      * 💻 CODE SESSION: Programar/Estudiar desarrollo.
+     * <p>
+     * Input: EXTERNAL (gestionado por CareerEngine)
+     * Condición: Al menos 1 sesión registrada en CareerEngine
+     * Reward: Calculado por CareerEngine (INT 60/h, DIS 20/h, WIS +50 si Flow >= 3h)
+     * Efecto: -3 HP por hora (gestionado por CareerEngine)
+     * <p>
+     * NOTA: CODE es especial - permite MÚLTIPLES entradas al día.
+     * Cada sesión se evalúa independientemente para el Flow Bonus.
+     * El usuario va a la sección CODE, mete horas, y puede repetir.
      */
     CODE(
             "💻",
             "Code Session",
-            "Programar o estudiar desarrollo (trackear con Wakatime)",
-            InputType.BOOLEAN,
-            Map.of(),
-            0
+            "Registrar horas de programación (múltiples sesiones permitidas)",
+            InputType.EXTERNAL,  // Gestionado por CareerEngine
+            Map.of(),            // XP calculada externamente
+            0                    // HP calculado externamente por sesión
     ),
 
     /**
@@ -99,8 +108,9 @@ public enum DailyQuestType {
     );
 
     public enum InputType {
-        BOOLEAN,
-        INTEGER
+        BOOLEAN,   // Checkbox simple (true/false)
+        INTEGER,   // Valor numérico (horas, páginas)
+        EXTERNAL   // Gestionado por sistema externo (CareerEngine)
     }
 
     private final String icon;
@@ -145,8 +155,30 @@ public enum DailyQuestType {
         return inputType == InputType.BOOLEAN;
     }
 
+    /**
+     * Indica si esta quest es gestionada por un sistema externo (ej: CareerEngine para CODE).
+     * El sistema externo se encarga de calcular XP, HP y marcar como completada.
+     */
+    public boolean isExternallyManaged() {
+        return inputType == InputType.EXTERNAL;
+    }
+
     public boolean affectsHP() {
         return hpEffect != 0 || this == SLEEP; // SLEEP afecta HP aunque su base sea 0
+    }
+
+    /**
+     * ¿Esta quest otorga HP al completarse?
+     */
+    public boolean grantsHP() {
+        return hpEffect > 0 || this == SLEEP; // SLEEP tiene HP dinámico
+    }
+
+    /**
+     * ¿Esta quest cuesta HP al completarse?
+     */
+    public boolean costsHP() {
+        return hpEffect < 0;
     }
 
     public QuestRank getRank() {
@@ -154,11 +186,16 @@ public enum DailyQuestType {
     }
 
     public QuestReward calculateReward(boolean completed) {
-        if (!requiresBooleanInput()) throw new IllegalStateException(name() + " requiere input INTEGER");
+        if (isExternallyManaged()) {
+            // CODE es gestionado por CareerEngine, no calcular reward aquí
+            return QuestReward.empty();
+        }
+        if (!requiresBooleanInput()) {
+            throw new IllegalStateException(name() + " requiere input INTEGER");
+        }
         if (!completed) return QuestReward.empty();
 
         if (this == DIET) return QuestReward.ofGeneralXP(50);
-        if (this == CODE) return QuestReward.empty();
 
         QuestReward.Builder builder = QuestReward.builder();
         baseStatXP.forEach(builder::addStatXP);
@@ -182,7 +219,12 @@ public enum DailyQuestType {
     }
 
     public boolean meetsCondition(boolean input) {
-        if (!requiresBooleanInput()) throw new IllegalStateException(name() + " requiere input INTEGER");
+        if (isExternallyManaged()) {
+            throw new IllegalStateException(name() + " es gestionado externamente. Usa CareerEngine.hasActivityToday()");
+        }
+        if (!requiresBooleanInput()) {
+            throw new IllegalStateException(name() + " requiere input INTEGER");
+        }
         return input;
     }
 

@@ -77,7 +77,8 @@ public final class DailyQuest implements Quest {
 
         // IMPORTANTE: Solo validar input si el estado es COMPLETED
         // Si está FAILED o PENDING, el input puede ser null
-        if (status == QuestStatus.COMPLETED) {
+        // EXTERNAL (como CODE) no requiere input aquí - se gestiona externamente
+        if (status == QuestStatus.COMPLETED && !type.isExternallyManaged()) {
             if (type.requiresBooleanInput() && booleanInput == null) {
                 throw new IllegalArgumentException(
                         String.format("%s requiere input Boolean", type)
@@ -213,6 +214,11 @@ public final class DailyQuest implements Quest {
             return QuestReward.empty();
         }
 
+        // EXTERNAL (CODE) - reward viene del sistema externo (CareerEngine)
+        if (type.isExternallyManaged()) {
+            return QuestReward.empty();
+        }
+
         // Calcular reward según input
         if (type.requiresBooleanInput()) {
             return type.calculateReward(booleanInput);
@@ -322,6 +328,45 @@ public final class DailyQuest implements Quest {
                 completedAt,
                 null,
                 value,
+                newStreak,
+                newBest
+        );
+    }
+
+    /**
+     * Marca una quest EXTERNAL (como CODE) como completada.
+     * Este método es llamado por el sistema externo (ej: CareerEngine).
+     *
+     * @param completedAt Timestamp de completado
+     * @return Nueva instancia con estado COMPLETED
+     */
+    public DailyQuest markAsExternallyCompleted(Instant completedAt) {
+        if (completedAt == null) {
+            throw new IllegalArgumentException("El timestamp de completado no puede ser null");
+        }
+        if (!type.isExternallyManaged()) {
+            throw new IllegalArgumentException(
+                    String.format("%s no es una quest gestionada externamente", type)
+            );
+        }
+        if (!status.canTransitionTo(QuestStatus.COMPLETED)) {
+            throw new IllegalStateException(
+                    String.format("No se puede completar una quest en estado %s", status)
+            );
+        }
+
+        int newStreak = currentStreak + 1;
+        int newBest = Math.max(bestStreak, newStreak);
+
+        return new DailyQuest(
+                id,
+                type,
+                questDate,
+                QuestStatus.COMPLETED,
+                createdAt,
+                completedAt,
+                null,  // No input Boolean
+                null,  // No input Integer - el valor viene del sistema externo
                 newStreak,
                 newBest
         );

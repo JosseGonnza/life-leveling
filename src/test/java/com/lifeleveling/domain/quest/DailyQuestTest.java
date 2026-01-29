@@ -71,7 +71,7 @@ class DailyQuestTest {
     @Nested
     class BooleanCompletion {
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("completeWithInput(true) completa quest Boolean")
         void whenCompletingWithTrue_thenQuestCompleted(DailyQuestType type) {
             DailyQuest quest = DailyQuest.create(type, LocalDate.now());
@@ -81,6 +81,15 @@ class DailyQuestTest {
             assertEquals(QuestStatus.COMPLETED, completed.status());
             assertEquals(Boolean.TRUE, completed.getBooleanInput());
             assertNotNull(completed.getCompletedAt());
+        }
+
+        @Test
+        @DisplayName("CODE no puede completarse con Boolean (es EXTERNAL)")
+        void code_cannotBeCompletedWithBoolean() {
+            DailyQuest quest = DailyQuest.create(DailyQuestType.CODE, LocalDate.now());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> quest.completeWithInput(true, Instant.now()));
         }
 
         @Test
@@ -128,12 +137,23 @@ class DailyQuestTest {
         }
 
         @Test
-        @DisplayName("SLEEP con <7 horas lanza excepción")
-        void whenSleepingLessThan7Hours_thenThrowsException() {
+        @DisplayName("SLEEP con <6 horas lanza excepción (según Biblia, mínimo 6h para Tier 1)")
+        void whenSleepingLessThan6Hours_thenThrowsException() {
             DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
 
             assertThrows(IllegalArgumentException.class,
-                    () -> quest.completeWithInput(6, Instant.now()));
+                    () -> quest.completeWithInput(5, Instant.now()));
+        }
+
+        @Test
+        @DisplayName("SLEEP con 6 horas se completa (Tier 1: +15 HP)")
+        void whenSleeping6Hours_thenCompletes() {
+            DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
+
+            DailyQuest completed = quest.completeWithInput(6, Instant.now());
+
+            assertEquals(QuestStatus.COMPLETED, completed.status());
+            assertEquals(6, completed.getIntegerInput());
         }
 
         @Test
@@ -146,10 +166,19 @@ class DailyQuestTest {
         }
 
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("completeWithInput(int) en quest BOOLEAN lanza excepción")
         void whenCompletingBooleanQuestWithInteger_thenThrowsException(DailyQuestType type) {
             DailyQuest quest = DailyQuest.create(type, LocalDate.now());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> quest.completeWithInput(10, Instant.now()));
+        }
+
+        @Test
+        @DisplayName("CODE no puede completarse con Integer (es EXTERNAL)")
+        void code_cannotBeCompletedWithInteger() {
+            DailyQuest quest = DailyQuest.create(DailyQuestType.CODE, LocalDate.now());
 
             assertThrows(IllegalArgumentException.class,
                     () -> quest.completeWithInput(10, Instant.now()));
@@ -328,13 +357,13 @@ class DailyQuestTest {
         }
 
         @Test
-        @DisplayName("SLEEP con 8 horas da +80 XP General")
-        void whenSleep8Hours_then80GeneralXP() {
+        @DisplayName("SLEEP con 8 horas da +120 XP General (15 XP/h según Biblia)")
+        void whenSleep8Hours_then120GeneralXP() {
             DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
             DailyQuest completed = quest.completeWithInput(8, Instant.now());
 
             QuestReward reward = completed.reward();
-            assertEquals(80, reward.generalXP());
+            assertEquals(120, reward.generalXP()); // 8h * 15 XP = 120
         }
 
         @Test
@@ -351,10 +380,11 @@ class DailyQuestTest {
     @Nested
     class HPEffects {
         @Test
-        @DisplayName("SLEEP tiene efecto +15 HP")
-        void sleep_has15HPEffect() {
+        @DisplayName("SLEEP tiene efecto HP dinámico (base 0, se calcula según horas)")
+        void sleep_hasDynamicHPEffect() {
             DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
-            assertEquals(15, quest.getHPEffect());
+            // Base es 0, pero se calcula dinámicamente según horas dormidas
+            assertEquals(0, quest.getHPEffect());
         }
 
         @Test
@@ -364,9 +394,23 @@ class DailyQuestTest {
             assertEquals(-5, quest.getHPEffect());
         }
 
+        @Test
+        @DisplayName("DIET tiene efecto +5 HP (según Biblia)")
+        void diet_has5HPEffect() {
+            DailyQuest quest = DailyQuest.create(DailyQuestType.DIET, LocalDate.now());
+            assertEquals(5, quest.getHPEffect());
+        }
+
+        @Test
+        @DisplayName("SKINCARE tiene efecto +10 HP (según Biblia)")
+        void skincare_has10HPEffect() {
+            DailyQuest quest = DailyQuest.create(DailyQuestType.SKINCARE, LocalDate.now());
+            assertEquals(10, quest.getHPEffect());
+        }
+
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "CODE", "READ", "SKINCARE", "TIDY"})
-        @DisplayName("Otras quests tienen efecto 0 HP")
+        @EnumSource(value = DailyQuestType.class, names = {"CODE", "READ", "TIDY"})
+        @DisplayName("CODE, READ y TIDY tienen efecto 0 HP")
         void otherQuests_haveZeroHPEffect(DailyQuestType type) {
             DailyQuest quest = DailyQuest.create(type, LocalDate.now());
             assertEquals(0, quest.getHPEffect());
@@ -420,7 +464,8 @@ class DailyQuestTest {
         @DisplayName("description() retorna la descripción del tipo")
         void description_returnsTypeDescription() {
             DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
-            assertTrue(quest.description().contains("7 horas"));
+            // La descripción ahora menciona "energía mental" (no "7 horas")
+            assertTrue(quest.description().contains("energía mental"));
         }
 
         @Test

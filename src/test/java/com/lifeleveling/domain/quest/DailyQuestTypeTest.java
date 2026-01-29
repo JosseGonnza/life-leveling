@@ -59,11 +59,12 @@ class DailyQuestTypeTest {
     @Nested
     class InputTypes {
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "CODE", "SKINCARE", "TIDY"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Quests Boolean-based")
         void booleanQuestshaveBooleanInput(DailyQuestType type) {
             assertTrue(type.requiresBooleanInput());
             assertFalse(type.requiresNumericInput());
+            assertFalse(type.isExternallyManaged());
             assertEquals(DailyQuestType.InputType.BOOLEAN, type.getInputType());
         }
 
@@ -73,19 +74,36 @@ class DailyQuestTypeTest {
         void integerQuestsHaveNumericInput(DailyQuestType type) {
             assertTrue(type.requiresNumericInput());
             assertFalse(type.requiresBooleanInput());
+            assertFalse(type.isExternallyManaged());
             assertEquals(DailyQuestType.InputType.INTEGER, type.getInputType());
+        }
+
+        @Test
+        @DisplayName("CODE es gestionado externamente por CareerEngine")
+        void code_isExternallyManaged() {
+            assertTrue(DailyQuestType.CODE.isExternallyManaged());
+            assertFalse(DailyQuestType.CODE.requiresBooleanInput());
+            assertFalse(DailyQuestType.CODE.requiresNumericInput());
+            assertEquals(DailyQuestType.InputType.EXTERNAL, DailyQuestType.CODE.getInputType());
         }
     }
 
     @Nested
     class HPEffects {
         @Test
-        @DisplayName("SLEEP otorga +15 HP")
-        void sleep_grantsHP() {
-            assertEquals(15, DailyQuestType.SLEEP.getHpEffect());
-            assertTrue(DailyQuestType.SLEEP.grantsHP());
+        @DisplayName("SLEEP tiene HP dinámico (0, 15 o 30 según horas)")
+        void sleep_hasDynamicHP() {
+            // Base es 0, pero se calcula dinámicamente
+            assertEquals(0, DailyQuestType.SLEEP.getHpEffect());
+            assertTrue(DailyQuestType.SLEEP.grantsHP()); // Devuelve true porque es SLEEP
             assertFalse(DailyQuestType.SLEEP.costsHP());
             assertTrue(DailyQuestType.SLEEP.affectsHP());
+
+            // Verificar cálculo dinámico
+            assertEquals(0, DailyQuestType.SLEEP.calculateDynamicHP(5));   // < 6h
+            assertEquals(15, DailyQuestType.SLEEP.calculateDynamicHP(6));  // 6h-6.9h
+            assertEquals(30, DailyQuestType.SLEEP.calculateDynamicHP(7));  // >= 7h
+            assertEquals(30, DailyQuestType.SLEEP.calculateDynamicHP(9));  // >= 7h
         }
 
         @Test
@@ -97,10 +115,28 @@ class DailyQuestTypeTest {
             assertTrue(DailyQuestType.GYM.affectsHP());
         }
 
+        @Test
+        @DisplayName("DIET otorga +5 HP (según Biblia)")
+        void diet_grantsHP() {
+            assertEquals(5, DailyQuestType.DIET.getHpEffect());
+            assertTrue(DailyQuestType.DIET.grantsHP());
+            assertFalse(DailyQuestType.DIET.costsHP());
+            assertTrue(DailyQuestType.DIET.affectsHP());
+        }
+
+        @Test
+        @DisplayName("SKINCARE otorga +10 HP (según Biblia)")
+        void skincare_grantsHP() {
+            assertEquals(10, DailyQuestType.SKINCARE.getHpEffect());
+            assertTrue(DailyQuestType.SKINCARE.grantsHP());
+            assertFalse(DailyQuestType.SKINCARE.costsHP());
+            assertTrue(DailyQuestType.SKINCARE.affectsHP());
+        }
+
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "CODE", "READ", "SKINCARE", "TIDY"})
-        @DisplayName("Otras quests no afectan HP")
-        void otherQuests_doNotAffectHP(DailyQuestType type) {
+        @EnumSource(value = DailyQuestType.class, names = {"CODE", "READ", "TIDY"})
+        @DisplayName("CODE, READ y TIDY no afectan HP directamente")
+        void neutralQuests_doNotAffectHP(DailyQuestType type) {
             assertEquals(0, type.getHpEffect());
             assertFalse(type.grantsHP());
             assertFalse(type.costsHP());
@@ -139,11 +175,12 @@ class DailyQuestTypeTest {
         }
 
         @Test
-        @DisplayName("TIDY completado da +50 XP Sabiduría")
-        void tidy_gives50WisdomXP() {
+        @DisplayName("TIDY completado da +50 XP Disciplina (según Biblia: ordenar requiere voluntad)")
+        void tidy_gives50DisciplineXP() {
             QuestReward reward = DailyQuestType.TIDY.calculateReward(true);
 
-            assertEquals(50, reward.getStatXP(StatType.WISDOM));
+            assertEquals(50, reward.getStatXP(StatType.DISCIPLINE));
+            assertEquals(0, reward.getStatXP(StatType.WISDOM));
         }
 
         @Test
@@ -155,12 +192,19 @@ class DailyQuestTypeTest {
         }
 
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Boolean quests no completadas (false) no dan reward")
         void whenNotCompleted_thenNoReward(DailyQuestType type) {
             QuestReward reward = type.calculateReward(false);
 
             assertTrue(reward.isEmpty());
+        }
+
+        @Test
+        @DisplayName("CODE siempre devuelve reward vacío (XP viene de CareerEngine)")
+        void code_alwaysReturnsEmptyReward() {
+            assertTrue(DailyQuestType.CODE.calculateReward(true).isEmpty());
+            assertTrue(DailyQuestType.CODE.calculateReward(false).isEmpty());
         }
 
         @ParameterizedTest
@@ -175,11 +219,15 @@ class DailyQuestTypeTest {
     @Nested
     class IntegerRewards {
         @Test
-        @DisplayName("SLEEP da +10 XP General por hora")
-        void sleep_gives10XPPerHour() {
-            assertEquals(70, DailyQuestType.SLEEP.calculateReward(7).generalXP());
-            assertEquals(80, DailyQuestType.SLEEP.calculateReward(8).generalXP());
-            assertEquals(90, DailyQuestType.SLEEP.calculateReward(9).generalXP());
+        @DisplayName("SLEEP da +15 XP General por hora (según Biblia), máximo 8.5h")
+        void sleep_gives15XPPerHour() {
+            // 15 XP/h según la Biblia
+            assertEquals(105, DailyQuestType.SLEEP.calculateReward(7).generalXP());  // 7 * 15 = 105
+            assertEquals(120, DailyQuestType.SLEEP.calculateReward(8).generalXP());  // 8 * 15 = 120
+
+            // Máximo 8.5h computables (127.5 -> 127 XP)
+            assertEquals(127, DailyQuestType.SLEEP.calculateReward(9).generalXP());  // min(9, 8.5) * 15 = 127
+            assertEquals(127, DailyQuestType.SLEEP.calculateReward(12).generalXP()); // Capped at 8.5h
         }
 
         @Test
@@ -200,35 +248,50 @@ class DailyQuestTypeTest {
         }
 
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Usar calculateReward(int) en quest BOOLEAN lanza excepción")
         void whenUsingIntegerRewardOnBooleanQuest_thenThrowsException(DailyQuestType type) {
             assertThrows(IllegalStateException.class,
                     () -> type.calculateReward(10));
+        }
+
+        @Test
+        @DisplayName("CODE también lanza excepción con calculateReward(int)")
+        void code_throwsExceptionWithIntegerReward() {
+            assertThrows(IllegalStateException.class,
+                    () -> DailyQuestType.CODE.calculateReward(10));
         }
     }
 
     @Nested
     class Conditions {
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Boolean quests: meetsCondition(true) = true")
         void booleanQuests_meetConditionWhenTrue(DailyQuestType type) {
             assertTrue(type.meetsCondition(true));
         }
 
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Boolean quests: meetsCondition(false) = false")
         void booleanQuests_doNotMeetConditionWhenFalse(DailyQuestType type) {
             assertFalse(type.meetsCondition(false));
         }
 
         @Test
-        @DisplayName("SLEEP: meetsCondition >= 7 horas")
-        void sleep_meetsConditionWhen7OrMore() {
-            assertFalse(DailyQuestType.SLEEP.meetsCondition(6));
-            assertTrue(DailyQuestType.SLEEP.meetsCondition(7));
+        @DisplayName("CODE: meetsCondition() lanza excepción (gestionado externamente)")
+        void code_meetsConditionThrowsException() {
+            assertThrows(IllegalStateException.class,
+                    () -> DailyQuestType.CODE.meetsCondition(true));
+        }
+
+        @Test
+        @DisplayName("SLEEP: meetsCondition >= 6 horas (según Biblia, Tier 1 de HP)")
+        void sleep_meetsConditionWhen6OrMore() {
+            assertFalse(DailyQuestType.SLEEP.meetsCondition(5));
+            assertTrue(DailyQuestType.SLEEP.meetsCondition(6));  // Tier 1: +15 HP
+            assertTrue(DailyQuestType.SLEEP.meetsCondition(7));  // Tier 2: +30 HP
             assertTrue(DailyQuestType.SLEEP.meetsCondition(8));
             assertTrue(DailyQuestType.SLEEP.meetsCondition(10));
         }
@@ -251,7 +314,7 @@ class DailyQuestTypeTest {
         }
 
         @ParameterizedTest
-        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY", "CODE"})
+        @EnumSource(value = DailyQuestType.class, names = {"DIET", "GYM", "SKINCARE", "TIDY"})
         @DisplayName("Usar meetsCondition(int) en quest BOOLEAN lanza excepción")
         void whenUsingIntegerConditionOnBooleanQuest_thenThrowsException(DailyQuestType type) {
             assertThrows(IllegalStateException.class,
@@ -325,9 +388,9 @@ class DailyQuestTypeTest {
         @DisplayName("SLEEP tiene todas las propiedades correctas")
         void sleep_hasCorrectProperties() {
             assertEquals("💤", DailyQuestType.SLEEP.getIcon());
-            assertEquals("Descanso (+7h)", DailyQuestType.SLEEP.getName());
+            assertEquals("Descanso", DailyQuestType.SLEEP.getName());
             assertTrue(DailyQuestType.SLEEP.requiresNumericInput());
-            assertEquals(15, DailyQuestType.SLEEP.getHpEffect());
+            assertEquals(0, DailyQuestType.SLEEP.getHpEffect()); // HP es dinámico
             assertTrue(DailyQuestType.SLEEP.getBaseStatXP().isEmpty());
         }
 
@@ -338,6 +401,15 @@ class DailyQuestTypeTest {
             assertTrue(DailyQuestType.GYM.requiresBooleanInput());
             assertEquals(-5, DailyQuestType.GYM.getHpEffect());
             assertEquals(50, DailyQuestType.GYM.getBaseStatXP().get(StatType.STRENGTH));
+        }
+
+        @Test
+        @DisplayName("CODE es gestionado por CareerEngine")
+        void code_hasCorrectProperties() {
+            assertEquals("💻", DailyQuestType.CODE.getIcon());
+            assertTrue(DailyQuestType.CODE.isExternallyManaged());
+            assertEquals(0, DailyQuestType.CODE.getHpEffect()); // HP gestionado por CareerEngine
+            assertTrue(DailyQuestType.CODE.getBaseStatXP().isEmpty()); // XP gestionada por CareerEngine
         }
     }
 }

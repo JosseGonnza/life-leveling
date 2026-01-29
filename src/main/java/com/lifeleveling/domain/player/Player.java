@@ -1,11 +1,14 @@
 package com.lifeleveling.domain.player;
 
+import com.lifeleveling.domain.career.CareerEngine;
+import com.lifeleveling.domain.career.CareerReward;
+import com.lifeleveling.domain.career.CodeSession;
 import com.lifeleveling.domain.debuff.Debuff;
 import com.lifeleveling.domain.debuff.DebuffTracker;
 import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
-import com.lifeleveling.domain.quest.condition.GateTracker; // Importante: Fase 9
+import com.lifeleveling.domain.quest.condition.GateTracker;
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
 
@@ -32,7 +35,8 @@ public class Player {
     private final Inventory inventory;
     private final TitleInventory titleInventory;
     private final DebuffTracker debuffTracker;
-    private final GateTracker gateTracker; // [Fase 9] Historial y Rachas
+    private final GateTracker gateTracker;
+    private final CareerEngine careerEngine;  // [CareerEngine] Gestiona sesiones de código
 
     // Estado de Burnout (Bloqueo temporal)
     private BurnoutLock activeBurnoutLock;
@@ -40,7 +44,8 @@ public class Player {
     // Constructor privado para forzar uso de métodos factoría
     private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
-                   DebuffTracker debuffTracker, GateTracker gateTracker, // [Fase 9] Param
+                   DebuffTracker debuffTracker, GateTracker gateTracker,
+                   CareerEngine careerEngine,
                    BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
@@ -51,7 +56,8 @@ public class Player {
         this.inventory = inventory;
         this.titleInventory = titleInventory;
         this.debuffTracker = debuffTracker;
-        this.gateTracker = gateTracker; // [Fase 9] Asignación
+        this.gateTracker = gateTracker;
+        this.careerEngine = careerEngine;
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -69,7 +75,8 @@ public class Player {
                 new Inventory(),
                 new TitleInventory(),
                 new DebuffTracker(),
-                new GateTracker(), // [Fase 9] Inicializar vacío
+                new GateTracker(),
+                new CareerEngine(),  // [CareerEngine] Inicializar
                 null
         );
     }
@@ -77,9 +84,11 @@ public class Player {
     // Para reconstruir desde persistencia (JSON/DB)
     public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
-                                 DebuffTracker debuffTracker, GateTracker gateTracker, // [Fase 9] Param
+                                 DebuffTracker debuffTracker, GateTracker gateTracker,
+                                 CareerEngine careerEngine,
                                  BurnoutLock lock) {
-        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory, debuffTracker, gateTracker, lock);
+        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory,
+                debuffTracker, gateTracker, careerEngine, lock);
     }
 
     // ========================================================================================
@@ -374,7 +383,60 @@ public class Player {
         return name;
     }
 
-    public GateTracker getGateTracker() { // Getter
+    public GateTracker getGateTracker() {
         return gateTracker;
+    }
+
+    // ========================================================================================
+    // CAREER ENGINE (Sesiones de Código)
+    // ========================================================================================
+
+    /**
+     * Registra una sesión de código (múltiples entradas permitidas por día).
+     *
+     * Este método:
+     * 1. Registra la sesión en CareerEngine (calcula XP y Flow)
+     * 2. Aplica XP (INT, DIS, y WIS si Flow) con todos los multiplicadores
+     * 3. Aplica daño HP (3/hora) con mitigación de equipo
+     * 4. Actualiza horas totales en GateTracker (para títulos)
+     *
+     * @param hours Horas trabajadas en esta sesión (mínimo 0.5, máximo 12)
+     * @return La sesión creada con sus recompensas
+     * @throws IllegalArgumentException si las horas son inválidas o exceden el límite diario
+     */
+    public CodeSession registerCodeSession(double hours) {
+        // 1. Registrar en CareerEngine (calcula XP, HP, Flow)
+        CodeSession session = careerEngine.registerSession(hours);
+        CareerReward reward = session.getReward();
+
+        // 2. Aplicar XP (con multiplicadores de HP state, debuffs, títulos)
+        addXP(StatType.INTELLECT, reward.intellectXP());
+        addXP(StatType.DISCIPLINE, reward.disciplineXP());
+        if (session.isFlowAchieved()) {
+            addXP(StatType.WISDOM, reward.wisdomXP());
+        }
+
+        // 3. Aplicar daño HP (con mitigación de equipo: silla, periféricos, etc.)
+        takeWorkDamage(reward.hpCost());
+
+        // 4. Actualizar horas totales en GateTracker (para títulos como Code Monkey, 10x Dev)
+        gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
+
+        return session;
+    }
+
+    /**
+     * ¿Se ha registrado al menos una sesión de código hoy?
+     * Útil para marcar la DailyQuest CODE como completada.
+     */
+    public boolean hasCodeActivityToday() {
+        return careerEngine.hasActivityToday();
+    }
+
+    /**
+     * Obtiene el CareerEngine para consultar sesiones y estadísticas.
+     */
+    public CareerEngine getCareerEngine() {
+        return careerEngine;
     }
 }
