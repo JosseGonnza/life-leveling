@@ -25,6 +25,10 @@ public class Player {
 
     private HPState hpState;
     private int currentHP;
+
+    // [NUEVO] Rango Profesional (Multiplicador de Ingresos)
+    private PlayerRank currentRank;
+
     private Stats stats;
     private Wallet wallet;
 
@@ -36,7 +40,8 @@ public class Player {
 
     private BurnoutLock activeBurnoutLock;
 
-    private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
+    // Constructor privado actualizado
+    private Player(UUID id, String name, int currentHP, PlayerRank currentRank, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
                    DebuffTracker debuffTracker, GateTracker gateTracker,
                    CareerEngine careerEngine,
@@ -45,6 +50,7 @@ public class Player {
         this.name = name;
         this.currentHP = currentHP;
         this.hpState = HPState.fromHP(currentHP);
+        this.currentRank = currentRank; // [NUEVO] Inicialización
         this.stats = stats;
         this.wallet = wallet;
         this.inventory = inventory;
@@ -60,21 +66,83 @@ public class Player {
     // ========================================================================================
 
     public static Player create(String name) {
-        return new Player(UUID.randomUUID(), name, 100, Stats.initial(), Wallet.empty(),
-                new Inventory(), new TitleInventory(), new DebuffTracker(), new GateTracker(), new CareerEngine(), null);
+        return new Player(
+                UUID.randomUUID(),
+                name,
+                100,
+                PlayerRank.E, // [NUEVO] Empieza como Novato (x1.0)
+                Stats.initial(),
+                Wallet.empty(),
+                new Inventory(), new TitleInventory(), new DebuffTracker(), new GateTracker(), new CareerEngine(), null
+        );
     }
 
-    public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
+    // Actualizado para restaurar el Rango desde persistencia
+    public static Player restore(UUID id, String name, int currentHP, PlayerRank rank, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
                                  DebuffTracker debuffTracker, GateTracker gateTracker,
                                  CareerEngine careerEngine,
                                  BurnoutLock lock) {
-        return new Player(id, name, currentHP, stats, wallet, inventory, titleInventory,
+        return new Player(id, name, currentHP, rank, stats, wallet, inventory, titleInventory,
                 debuffTracker, gateTracker, careerEngine, lock);
     }
 
     // ========================================================================================
-    // LÓGICA DE NEGOCIO PRINCIPAL
+    // GESTIÓN DE RANGO (PROMOCIONES)
+    // ========================================================================================
+
+    public PlayerRank getCurrentRank() {
+        return currentRank;
+    }
+
+    /**
+     * Asciende al jugador a un nuevo rango profesional.
+     * Generalmente llamado al completar una System Quest (Gate).
+     */
+    public void promoteToRank(PlayerRank newRank) {
+        if (newRank == null) return;
+
+        // Solo permitimos ascensos (no degradaciones), salvo lógica especial futura
+        if (newRank.ordinal() > this.currentRank.ordinal()) {
+            this.currentRank = newRank;
+            System.out.println("🎉 ¡ASCENSO! Nuevo Rango: " + newRank.getDisplayName() +
+                    " (Ingresos x" + newRank.getGoldMultiplier() + ")");
+        }
+    }
+
+    // ========================================================================================
+    // ECONOMÍA (ACTUALIZADA CON RANGO)
+    // ========================================================================================
+
+    public void addGold(int amount) {
+        // 1. Aplicar Multiplicador de RANGO (Profesionalidad)
+        // Ejemplo: Si eres Senior (A), amount se multiplica por 4.0
+        double rankMultiplier = currentRank.getGoldMultiplier();
+        double baseWithRank = amount * rankMultiplier;
+
+        // 2. Aplicar Multiplicador de SALUD (HP State)
+        // Si estás en CRITICAL (Burnout), esto devuelve 0 (No ganas nada).
+        double hpMultiplier = hpState.getGoldMultiplier(); // 1.0, 1.0 o 0.0
+
+        // 3. Aplicar Multiplicador de TÍTULOS (Buffs pasivos)
+        // Ej: "Ahorrador" da +2%
+        double titleMultiplier = titleInventory.getGoldMultiplier();
+
+        // Cálculo Final
+        int finalAmount = (int) Math.round(baseWithRank * hpMultiplier * titleMultiplier);
+
+        if (finalAmount > 0) {
+            this.wallet = wallet.add(finalAmount);
+        }
+    }
+
+    public void spendGold(int amount) {
+        if (!wallet.canAfford(amount)) throw new IllegalStateException("No tienes suficiente oro");
+        this.wallet = wallet.subtract(amount);
+    }
+
+    // ========================================================================================
+    // LÓGICA DE NEGOCIO PRINCIPAL (LEVELING) - Sin cambios
     // ========================================================================================
 
     public int getLevel() {
@@ -111,20 +179,8 @@ public class Player {
         }
     }
 
-    public void addGold(int amount) {
-        int afterHpMultiplier = hpState.applyGoldMultiplier(amount);
-        double titleMultiplier = titleInventory.getGoldMultiplier();
-        int finalAmount = (int) Math.round(afterHpMultiplier * titleMultiplier);
-        this.wallet = wallet.add(finalAmount);
-    }
-
-    public void spendGold(int amount) {
-        if (!wallet.canAfford(amount)) throw new IllegalStateException("No tienes suficiente oro");
-        this.wallet = wallet.subtract(amount);
-    }
-
     // ========================================================================================
-    // GESTIÓN DE SALUD (HP)
+    // GESTIÓN DE SALUD (HP) - Sin cambios
     // ========================================================================================
 
     public void heal(int amount) {
@@ -155,48 +211,28 @@ public class Player {
     }
 
     // ========================================================================================
-    // PERFECT DAY MECHANIC (Fase 11)
+    // PERFECT DAY MECHANIC (Fase 11) - Sin cambios
     // ========================================================================================
 
-    /**
-     * Intenta reclamar el premio por Perfect Day (7/7 Dailies).
-     * Solo funciona una vez al día.
-     */
     public void triggerPerfectDay() {
-        // 1. Verificar CERROJO: Si ya lo logramos hoy, no damos premio doble.
-        if (gateTracker.isPerfectDayAchievedToday()) {
-            return;
-        }
+        if (gateTracker.isPerfectDayAchievedToday()) return;
 
         System.out.println("🌟 ¡PERFECT DAY! +100 XP, +100 G, HP MAX 🌟");
-
-        // 2. Aplicar Recompensas Biblia (Cap 2.1 §4)
-        this.heal(100); // Recuperación completa
-        this.addGold(100);
+        this.heal(100);
+        this.addGold(100); // Esto ahora aplicará el multiplicador de rango ;)
         this.addGeneralXP(100);
-
-        // 3. Limpieza Mental (Cura Aburrimiento si existe)
         debuffTracker.applyPerfectDayCure();
-
-        // 4. CERRAR EL CERROJO
         gateTracker.setPerfectDayAchievedToday(true);
     }
 
     // ========================================================================================
-    // CICLO DIARIO
+    // CICLO DIARIO - Sin cambios
     // ========================================================================================
 
     public void updateState(Instant now) {
-        // 1. Resetear flags diarias
-        gateTracker.resetDailyFlags(); // [Fase 11] Permitir Perfect Day mañana
-
-        // 2. Limpiar debuffs caducados
+        gateTracker.resetDailyFlags();
         debuffTracker.cleanExpiredDebuffs(now);
-
-        // 3. Gestionar Burnout
         manageBurnoutState(now);
-
-        // 4. Verificar Racha Limpia
         if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
             gateTracker.incrementDebuffFreeStreak();
         }
@@ -219,7 +255,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // DEBUFFS
+    // DEBUFFS - Sin cambios
     // ========================================================================================
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
@@ -236,7 +272,7 @@ public class Player {
     public DebuffTracker getDebuffTracker() { return debuffTracker; }
 
     // ========================================================================================
-    // ITEMS & CAREER (Resto sin cambios estructurales, solo getters/setters)
+    // ITEMS & CAREER - Sin cambios
     // ========================================================================================
 
     public void consumeItem(Item item) {
