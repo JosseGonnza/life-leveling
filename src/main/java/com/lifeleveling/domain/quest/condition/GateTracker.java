@@ -9,13 +9,14 @@ import java.util.*;
 /**
  * GateTracker: El cerebro histórico del jugador.
  * Gestiona el progreso de Gates, Rachas y Estadísticas acumuladas.
+ * Provee datos a las GateConditions para evaluar el éxito.
  */
 public class GateTracker {
 
-    // Historial de días pasados
+    // Historial de días pasados (Persistencia)
     private final TreeMap<LocalDate, DailyHistory> history = new TreeMap<>();
 
-    // Estado de Gates
+    // Estado de Gates y Confirmaciones
     private final Set<SystemQuestType> completedGates = new HashSet<>();
     private final Set<String> manualConfirmations = new HashSet<>();
     private final Map<String, LocalDate> timeLimitStartDates = new HashMap<>();
@@ -27,10 +28,8 @@ public class GateTracker {
     private int consecutiveWeeksWithFullWeeklies = 0;
     private int currentDebuffFreeStreak = 0;
 
-    // [FASE 11] Cerrojo de Perfect Day (Memoria a corto plazo)
+    // Flags diarios (Memoria a corto plazo, se resetean a las 00:00)
     private boolean perfectDayAchievedToday = false;
-
-    // [FASE 1.2] Flag para Burnout ocurrido HOY
     private boolean burnoutOccurredToday = false;
 
     public GateTracker() {}
@@ -47,12 +46,12 @@ public class GateTracker {
             boolean hadBurnout,
             boolean hadDebuffsActive,
             List<String> consumablesBought,
-            Set<String> completedQuestIds, // [NUEVO] IDs de quests completadas (ej: "TIDY", "GYM")
+            Set<String> completedQuestIds, // IDs de quests completadas (ej: "TIDY", "GYM")
             Map<QuestRank, Integer> completedQuestsCount
     ) {}
 
     // ========================================================================================
-    // MÉTODOS DE INGESTA
+    // MÉTODOS DE INGESTA (GUARDAR DATOS)
     // ========================================================================================
 
     public void addDailyHistory(DailyHistory day) {
@@ -68,89 +67,165 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // GESTIÓN DE FLAGS DIARIOS
-    // ========================================================================================
-
-    public boolean isPerfectDayAchievedToday() { return perfectDayAchievedToday; }
-    public void setPerfectDayAchievedToday(boolean achieved) { this.perfectDayAchievedToday = achieved; }
-
-    public void recordBurnoutToday() {
-        this.burnoutOccurredToday = true;
-        notifyDebuffReceived(); // Rompe racha de pureza
-    }
-
-    public boolean didBurnoutOccurToday() { return burnoutOccurredToday; }
-
-    /**
-     * IMPORTANTE: Llamar a esto en el Daily Reset (00:00).
-     */
-    public void resetDailyFlags() {
-        this.perfectDayAchievedToday = false;
-        this.burnoutOccurredToday = false;
-    }
-
-    // ========================================================================================
-    // LÓGICA DE NEGOCIO (RACHAS Y CASTIGOS)
+    // QUERIES HISTÓRICAS (SOLUCIÓN A TUS ERRORES DE COMPILACIÓN)
     // ========================================================================================
 
     /**
-     * Calcula cuántos días consecutivos (hacia atrás desde ayer) NO se ha completado una quest.
-     * Útil para triggers de castigo (ej: 3 días sin TIDY -> CAOS).
+     * [FIX] Soluciona error en HPThreshold.java
+     * Obtiene el HP más bajo registrado en los últimos X días.
      */
+    public int getMinHPInLastDays(int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(DailyHistory::minHP)
+                .min().orElse(100); // Si no hay datos, asumimos 100
+    }
+
+    /**
+     * [FIX] Soluciona error en BurnoutTrigger.java
+     * Cuenta cuántos Burnouts han ocurrido en los últimos 30 días (Histórico + Hoy).
+     */
+    public int getBurnoutsInLastMonth() {
+        LocalDate startDate = LocalDate.now().minusDays(30);
+
+        // 1. Contar históricos (ayer hacia atrás)
+        int count = (int) history.tailMap(startDate).values().stream()
+                .filter(DailyHistory::hadBurnout)
+                .count();
+
+        // 2. Sumar el de hoy si acaba de ocurrir
+        if (burnoutOccurredToday) {
+            count++;
+        }
+
+        return count;
+    }
+
+    /**
+     * [FIX] Soluciona error en NoBurnout.java
+     * Verifica si hubo algún Burnout desde que empezó la Gate (usando su ID para buscar la fecha).
+     */
+    public boolean hadBurnoutDuringGate(String gateId) {
+        LocalDate startDate = getTimeLimitStartDate(gateId);
+        if (startDate == null) return false; // Si no hay fecha de inicio, no podemos evaluar, asumimos false
+
+        // Revisar histórico desde esa fecha
+        boolean historic = history.tailMap(startDate).values().stream()
+                .anyMatch(DailyHistory::hadBurnout);
+
+        // Revisar hoy (si la gate empezó hoy o antes)
+        boolean today = burnoutOccurredToday && !LocalDate.now().isBefore(startDate);
+
+        return historic || today;
+    }
+
+    // --- OTRAS QUERIES DE FASE 3 ---
+
+    public double getCareerHoursInLastDays(int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .mapToDouble(DailyHistory::careerHours)
+                .sum();
+    }
+
+    public int getDailyQuestCompletionsInLastDays(String questId, int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return (int) history.tailMap(startDate).values().stream()
+                .filter(day -> day.completedQuestIds() != null && day.completedQuestIds().contains(questId))
+                .count();
+    }
+
+    public int getPerfectDaysCountInLastDays(int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        int count = (int) history.tailMap(startDate).values().stream()
+                .filter(DailyHistory::perfectDayAchieved)
+                .count();
+        if (perfectDayAchievedToday) count++;
+        return count;
+    }
+
+    public int getUserQuestsCompletedInLastDays(int days, QuestRank minRank) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(day -> day.completedQuestsCount().entrySet().stream()
+                        .filter(entry -> entry.getKey().isAtLeast(minRank))
+                        .mapToInt(Map.Entry::getValue)
+                        .sum())
+                .sum();
+    }
+
+    public int getPagesReadInLastDays(int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .mapToInt(DailyHistory::pagesRead)
+                .sum();
+    }
+
+    public boolean hasConsumablePurchaseInLastDays(String itemIdOrCategory, int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        return history.tailMap(startDate).values().stream()
+                .anyMatch(day -> day.consumablesBought().contains(itemIdOrCategory));
+    }
+
+    public boolean hasConsumedItemInLastDays(String itemId, int days) {
+        return hasConsumablePurchaseInLastDays(itemId, days);
+    }
+
+    // ========================================================================================
+    // RACHAS (STREAKS)
+    // ========================================================================================
+
     public int getDaysSinceLastQuestCompletion(String questId) {
         int days = 0;
-        LocalDate cursor = LocalDate.now().minusDays(1); // Empezamos a mirar desde ayer
-
+        LocalDate cursor = LocalDate.now().minusDays(1);
         while (history.containsKey(cursor)) {
             DailyHistory day = history.get(cursor);
-            if (day.completedQuestIds().contains(questId)) {
-                break; // Encontramos el día que sí lo hizo, paramos de contar
-            }
+            if (day.completedQuestIds() != null && day.completedQuestIds().contains(questId)) break;
             days++;
             cursor = cursor.minusDays(1);
         }
         return days;
     }
 
-    /**
-     * Calcula cuántos días consecutivos se ha trabajado (CODE o CareerHours > 0).
-     * Útil para trigger de BOREDOM (7 días seguidos).
-     */
     public int getConsecutiveWorkDays() {
         int streak = 0;
         LocalDate cursor = LocalDate.now().minusDays(1);
-
         while (history.containsKey(cursor)) {
             DailyHistory day = history.get(cursor);
-            boolean worked = day.careerHours() > 0 || day.completedQuestIds().contains("CODE");
-
-            if (worked) {
-                streak++;
-                cursor = cursor.minusDays(1);
-            } else {
-                break;
-            }
+            boolean worked = day.careerHours() > 0 || (day.completedQuestIds() != null && day.completedQuestIds().contains("CODE"));
+            if (worked) streak++; else break;
+            cursor = cursor.minusDays(1);
         }
         return streak;
     }
-
-    // ========================================================================================
-    // OTRAS QUERIES
-    // ========================================================================================
 
     public int getPerfectDayStreak() {
         LocalDate dateCursor = LocalDate.now().minusDays(1);
         int streak = 0;
         while (history.containsKey(dateCursor)) {
-            if (history.get(dateCursor).perfectDayAchieved()) {
-                streak++;
-                dateCursor = dateCursor.minusDays(1);
-            } else {
-                break;
-            }
+            if (history.get(dateCursor).perfectDayAchieved()) streak++; else break;
+            dateCursor = dateCursor.minusDays(1);
         }
         if (perfectDayAchievedToday) streak++;
         return streak;
+    }
+
+    // ========================================================================================
+    // GETTERS & SETTERS SIMPLES (FLAGS DIARIOS)
+    // ========================================================================================
+
+    public boolean isPerfectDayAchievedToday() { return perfectDayAchievedToday; }
+    public void setPerfectDayAchievedToday(boolean v) { this.perfectDayAchievedToday = v; }
+
+    public void recordBurnoutToday() {
+        this.burnoutOccurredToday = true;
+        notifyDebuffReceived(); // Rompe racha de pureza
+    }
+    public boolean didBurnoutOccurToday() { return burnoutOccurredToday; }
+
+    public void resetDailyFlags() {
+        this.perfectDayAchievedToday = false;
+        this.burnoutOccurredToday = false;
     }
 
     public int getDebuffFreeStreak() { return currentDebuffFreeStreak; }
@@ -158,12 +233,23 @@ public class GateTracker {
     public void incrementDebuffFreeStreak() { this.currentDebuffFreeStreak++; }
     public void setDebuffFreeStreak(int s) { this.currentDebuffFreeStreak = s; }
 
-    // Getters simples...
     public double getTotalCareerEngineHours() { return currentTotalCareerHours; }
     public boolean isGateCompleted(SystemQuestType gateType) { return completedGates.contains(gateType); }
+
+    public boolean hasManualConfirmation(String id) { return manualConfirmations.contains(id); }
+    public void setManualConfirmation(String id, boolean v) {
+        if(v) manualConfirmations.add(id); else manualConfirmations.remove(id);
+    }
+
     public LocalDate getTimeLimitStartDate(String id) { return timeLimitStartDates.get(id); }
     public void setTimeLimitStartDate(String id, LocalDate d) { timeLimitStartDates.put(id, d); }
     public void clearTimeLimit(String id) { timeLimitStartDates.remove(id); }
+
     public int getConsecutiveWeeksWithFullWeeklies() { return consecutiveWeeksWithFullWeeklies; }
     public void setConsecutiveWeeksWithFullWeeklies(int w) { this.consecutiveWeeksWithFullWeeklies = w; }
+
+    public void recordWeeklyQuestResult(boolean allCompleted) {
+        if (allCompleted) consecutiveWeeksWithFullWeeklies++;
+        else consecutiveWeeksWithFullWeeklies = 0;
+    }
 }
