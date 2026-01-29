@@ -9,11 +9,16 @@ import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
 import com.lifeleveling.domain.quest.condition.GateTracker;
+import com.lifeleveling.domain.quest.shared.QuestReward;
+import com.lifeleveling.domain.quest.weekly.WeeklyManager;
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -42,12 +47,17 @@ public class Player {
     // [FASE 4] Tracker de Hitos
     private final MilestoneTracker milestoneTracker;
 
+    // [FASE 5] Gestor de Misiones Semanales
+    private final WeeklyManager weeklyManager;
+
     private BurnoutLock activeBurnoutLock;
 
     private Player(UUID id, String name, int currentHP, PlayerRank currentRank, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
                    DebuffTracker debuffTracker, GateTracker gateTracker,
-                   CareerEngine careerEngine, MilestoneTracker milestoneTracker, // [NUEVO]
+                   CareerEngine careerEngine,
+                   MilestoneTracker milestoneTracker, // [FASE 4]
+                   WeeklyManager weeklyManager,       // [FASE 5]
                    BurnoutLock activeBurnoutLock) {
         this.id = id;
         this.name = name;
@@ -61,7 +71,8 @@ public class Player {
         this.debuffTracker = debuffTracker;
         this.gateTracker = gateTracker;
         this.careerEngine = careerEngine;
-        this.milestoneTracker = milestoneTracker; // [NUEVO]
+        this.milestoneTracker = milestoneTracker;
+        this.weeklyManager = weeklyManager;
         this.activeBurnoutLock = activeBurnoutLock;
     }
 
@@ -82,7 +93,8 @@ public class Player {
                 new DebuffTracker(),
                 new GateTracker(),
                 new CareerEngine(),
-                new MilestoneTracker(), // [NUEVO] Inicializamos el tracker
+                new MilestoneTracker(), // [FASE 4]
+                new WeeklyManager(),    // [FASE 5] Inicializamos el gestor semanal
                 null
         );
     }
@@ -90,14 +102,116 @@ public class Player {
     public static Player restore(UUID id, String name, int currentHP, PlayerRank rank, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
                                  DebuffTracker debuffTracker, GateTracker gateTracker,
-                                 CareerEngine careerEngine, MilestoneTracker milestoneTracker, // [NUEVO]
+                                 CareerEngine careerEngine,
+                                 MilestoneTracker milestoneTracker, // [FASE 4]
+                                 WeeklyManager weeklyManager,       // [FASE 5]
                                  BurnoutLock lock) {
         return new Player(id, name, currentHP, rank, stats, wallet, inventory, titleInventory,
-                debuffTracker, gateTracker, careerEngine, milestoneTracker, lock);
+                debuffTracker, gateTracker, careerEngine, milestoneTracker, weeklyManager, lock);
     }
 
     // ========================================================================================
-    // LEVELING & XP (INTEGRACIÓN FASE 4)
+    // CICLO DIARIO & SEMANAL [FASES 2 y 5]
+    // ========================================================================================
+
+    public void updateState(Instant now) {
+        // 1. Limpieza estándar diaria
+        gateTracker.resetDailyFlags();
+        debuffTracker.cleanExpiredDebuffs(now);
+        manageBurnoutState(now);
+
+        // 2. [FASE 5] Rotación Semanal (Si es Lunes, WeeklyManager se encarga)
+        if (weeklyManager != null) {
+            LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+            weeklyManager.performWeeklyReset(today);
+        }
+
+        // 3. Comprobación de Triggers automáticos (Castigos)
+        int daysNoTidy = gateTracker.getDaysSinceLastQuestCompletion("TIDY");
+        int workStreak = gateTracker.getConsecutiveWorkDays();
+
+        List<Debuff> newDebuffs = debuffTracker.checkDailyResetTriggers(daysNoTidy, workStreak, now);
+
+        for (Debuff db : newDebuffs) {
+            applyDebuffDirect(db);
+            System.out.println("⚠️ CASTIGO AUTOMÁTICO: " + db.getType().getDisplayName());
+        }
+
+        // 4. Racha de pureza
+        if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
+            gateTracker.incrementDebuffFreeStreak();
+        } else {
+            gateTracker.notifyDebuffReceived();
+        }
+    }
+
+    // ========================================================================================
+    // INTEGRACIÓN DE EVENTOS (HOOKS) [FASE 6]
+    // ========================================================================================
+
+    /**
+     * Notifica que una actividad ha sido completada.
+     * Sirve de HUB para activar Debuffs, Curas y Misiones Semanales.
+     */
+    public void notifyQuestCompleted(String questId, double inputValue) {
+        Instant now = Instant.now();
+        LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+
+        // 1. Triggers de Debuffs (Fatiga inmediata)
+        if ("SLEEP".equals(questId)) {
+            debuffTracker.checkSleepTrigger(inputValue, now).ifPresent(this::applyDebuffDirect);
+        }
+
+        // 2. Curas de Debuffs (Orden cura Caos)
+        if ("TIDY".equals(questId) && debuffTracker.hasDebuff(DebuffType.CHAOS)) {
+            debuffTracker.removeDebuff(DebuffType.CHAOS);
+            System.out.println("✨ El orden ha restaurado tu mente. Adiós Caos.");
+        }
+
+        // 3. Notificar al WeeklyManager para actualizar progreso
+        if (weeklyManager != null) {
+            // recordActivity devuelve las recompensas de quests completadas
+            List<QuestReward> weeklyRewards = weeklyManager.recordActivity(questId, inputValue, today);
+
+            // Aplicar cada recompensa ganada
+            for (QuestReward reward : weeklyRewards) {
+                applyQuestReward(reward);
+            }
+
+            // Actualizar progreso de quests DUAL (Templo Puro)
+            weeklyManager.refreshDualQuestProgress(today);
+        }
+    }
+
+    /**
+     * Aplica una recompensa de quest al jugador.
+     */
+    private void applyQuestReward(QuestReward reward) {
+        // Aplicar XP de stats
+        reward.statXP().forEach((stat, xp) -> {
+            if (xp > 0) {
+                addXP(stat, xp);
+            }
+        });
+
+        // Aplicar XP general
+        if (reward.generalXP() > 0) {
+            addGeneralXP(reward.generalXP());
+        }
+
+        // Aplicar oro
+        if (reward.gold() > 0) {
+            addGold(reward.gold());
+        }
+    }
+
+    private void applyDebuffDirect(Debuff d) {
+        debuffTracker.applyDebuff(d);
+        gateTracker.notifyDebuffReceived();
+    }
+
+    // ========================================================================================
+    // LEVELING & MILESTONES [FASE 4]
     // ========================================================================================
 
     public int getLevel() {
@@ -110,7 +224,7 @@ public class Player {
     public void addXP(StatType type, int amount) {
         if (amount <= 0) return;
 
-        int oldLevel = getLevel(); // Capturamos nivel antes de añadir XP
+        int oldLevel = getLevel();
 
         double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
@@ -122,14 +236,14 @@ public class Player {
 
         if (finalAmount > 0) {
             this.stats = stats.addXP(type, finalAmount);
-            checkLevelUp(oldLevel); // [NUEVO] Verificamos level up
+            checkLevelUp(oldLevel);
         }
     }
 
     public void addGeneralXP(int amount) {
         if (amount <= 0) return;
 
-        int oldLevel = getLevel(); // Capturamos nivel antes de añadir XP
+        int oldLevel = getLevel();
 
         double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
@@ -141,21 +255,16 @@ public class Player {
             for (StatType type : StatType.values()) {
                 this.stats = stats.addXP(type, perStat);
             }
-            checkLevelUp(oldLevel); // [NUEVO] Verificamos level up
+            checkLevelUp(oldLevel);
         }
     }
 
-    /**
-     * [NUEVO] Verifica si el nivel ha subido y otorga Milestones.
-     */
     private void checkLevelUp(int oldLevel) {
         int newLevel = getLevel();
         if (newLevel > oldLevel) {
             System.out.println("🆙 ¡LEVEL UP! " + oldLevel + " -> " + newLevel);
-
-            // Delegamos al tracker la entrega de premios
+            // [FASE 4] Milestones
             List<MilestoneType> awards = milestoneTracker.checkAndAward(this);
-
             if (!awards.isEmpty()) {
                 System.out.println("✨ Recompensas otorgadas: " + awards.size() + " hitos conseguidos.");
             }
@@ -163,46 +272,8 @@ public class Player {
     }
 
     // ========================================================================================
-    // RESTO DE LA CLASE (Sin cambios lógicos, solo integración de getters)
+    // ECONOMÍA & RANGO
     // ========================================================================================
-
-    public void updateState(Instant now) {
-        gateTracker.resetDailyFlags();
-        debuffTracker.cleanExpiredDebuffs(now);
-        manageBurnoutState(now);
-
-        int daysNoTidy = gateTracker.getDaysSinceLastQuestCompletion("TIDY");
-        int workStreak = gateTracker.getConsecutiveWorkDays();
-
-        List<Debuff> newDebuffs = debuffTracker.checkDailyResetTriggers(daysNoTidy, workStreak, now);
-
-        for (Debuff db : newDebuffs) {
-            applyDebuffDirect(db);
-            System.out.println("⚠️ CASTIGO AUTOMÁTICO: " + db.getType().getDisplayName());
-        }
-
-        if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
-            gateTracker.incrementDebuffFreeStreak();
-        } else {
-            gateTracker.notifyDebuffReceived();
-        }
-    }
-
-    public void notifyQuestCompleted(String questId, double inputValue) {
-        Instant now = Instant.now();
-        if ("SLEEP".equals(questId)) {
-            debuffTracker.checkSleepTrigger(inputValue, now).ifPresent(this::applyDebuffDirect);
-        }
-        if ("TIDY".equals(questId) && debuffTracker.hasDebuff(DebuffType.CHAOS)) {
-            debuffTracker.removeDebuff(DebuffType.CHAOS);
-            System.out.println("✨ El orden ha restaurado tu mente. Adiós Caos.");
-        }
-    }
-
-    private void applyDebuffDirect(Debuff d) {
-        debuffTracker.applyDebuff(d);
-        gateTracker.notifyDebuffReceived();
-    }
 
     public PlayerRank getCurrentRank() { return currentRank; }
 
@@ -231,6 +302,10 @@ public class Player {
         if (!wallet.canAfford(amount)) throw new IllegalStateException("No tienes suficiente oro");
         this.wallet = wallet.subtract(amount);
     }
+
+    // ========================================================================================
+    // SALUD & BURNOUT
+    // ========================================================================================
 
     public void heal(int amount) {
         int finalAmount = titleInventory.applyHPRecoveryBonus(amount);
@@ -295,7 +370,26 @@ public class Player {
         this.addGeneralXP(100);
         debuffTracker.applyPerfectDayCure();
         gateTracker.setPerfectDayAchievedToday(true);
+        gateTracker.incrementPerfectDayStreak();
+
+        // Notificar al WeeklyManager para THE_STREAK quest
+        if (weeklyManager != null) {
+            Optional<QuestReward> streakReward = weeklyManager.recordPerfectDay();
+            streakReward.ifPresent(this::applyQuestReward);
+        }
     }
+
+    /**
+     * Llamar cuando NO se logra Perfect Day (rompe la racha).
+     * Debe llamarse al final del día si no se completaron las 7 daily quests.
+     */
+    public void breakPerfectDayStreak() {
+        gateTracker.resetPerfectDayStreak();
+    }
+
+    // ========================================================================================
+    // OTROS (ITEMS, DEBUFFS, CAREER, TITLES)
+    // ========================================================================================
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
         if (titleInventory.hasImmunityTo(type.name())) return;
@@ -350,6 +444,10 @@ public class Player {
         if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
         takeWorkDamage(reward.hpCost(), hours);
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
+
+        // [FASE 6 HOOK] Notificamos también las horas de código (clave para "Code Marathon")
+        notifyQuestCompleted("CODE", hours);
+
         return session;
     }
 
@@ -359,9 +457,8 @@ public class Player {
     public TitleInventory getTitleInventory() { return titleInventory; }
     public DebuffTracker getDebuffTracker() { return debuffTracker; }
     public GateTracker getGateTracker() { return gateTracker; }
-
-    // [NUEVO] Getter para el MilestoneTracker
     public MilestoneTracker getMilestoneTracker() { return milestoneTracker; }
+    public WeeklyManager getWeeklyManager() { return weeklyManager; }
 
     public int getCurrentHP() { return currentHP; }
     public int getCurrentGold() { return wallet.currentGold(); }

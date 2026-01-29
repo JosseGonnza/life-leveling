@@ -27,6 +27,8 @@ public class GateTracker {
     // Rachas vivas
     private int consecutiveWeeksWithFullWeeklies = 0;
     private int currentDebuffFreeStreak = 0;
+    private int currentPerfectDayStreak = 0;
+    private int maxPerfectDayStreak = 0;  // Récord histórico
 
     // Flags diarios (Memoria a corto plazo, se resetean a las 00:00)
     private boolean perfectDayAchievedToday = false;
@@ -200,6 +202,39 @@ public class GateTracker {
     }
 
     public int getPerfectDayStreak() {
+        return currentPerfectDayStreak;
+    }
+
+    /**
+     * Incrementa la racha de Perfect Days.
+     * Llama a este método cuando se logra un Perfect Day.
+     */
+    public void incrementPerfectDayStreak() {
+        currentPerfectDayStreak++;
+        if (currentPerfectDayStreak > maxPerfectDayStreak) {
+            maxPerfectDayStreak = currentPerfectDayStreak;
+        }
+    }
+
+    /**
+     * Resetea la racha de Perfect Days a 0.
+     * Llama a este método cuando NO se logra Perfect Day un día.
+     */
+    public void resetPerfectDayStreak() {
+        currentPerfectDayStreak = 0;
+    }
+
+    /**
+     * Obtiene el récord histórico de Perfect Days seguidos.
+     */
+    public int getMaxPerfectDayStreak() {
+        return maxPerfectDayStreak;
+    }
+
+    /**
+     * Calcula la racha de Perfect Days desde el histórico (backup/verificación).
+     */
+    public int calculatePerfectDayStreakFromHistory() {
         LocalDate dateCursor = LocalDate.now().minusDays(1);
         int streak = 0;
         while (history.containsKey(dateCursor)) {

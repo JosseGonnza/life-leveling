@@ -118,6 +118,24 @@ public enum DailyQuestType {
         };
     }
 
+    // ========================================================================================
+    // SEARCH HELPER (El código que te falta)
+    // ========================================================================================
+
+    public static Optional<DailyQuestType> fromString(String name) {
+        if (name == null || name.isBlank()) return Optional.empty();
+        try {
+            // Intenta buscar exacto o normalizando mayúsculas
+            return Optional.of(DailyQuestType.valueOf(name.trim().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            // Búsqueda extra por si el nombre de display difiere del enum
+            for (DailyQuestType type : values()) {
+                if (type.name.equalsIgnoreCase(name.trim())) return Optional.of(type);
+            }
+            return Optional.empty();
+        }
+    }
+
     // Getters básicos...
     public String getName() { return name; }
     public String getDescription() { return description; }
