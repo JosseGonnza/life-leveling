@@ -1,5 +1,7 @@
 package com.lifeleveling.domain.player;
 
+import com.lifeleveling.domain.quest.shared.QuestRank;
+
 /**
  * Rango Profesional del Jugador.
  * Define el estatus social y el multiplicador de ingresos.
@@ -8,59 +10,13 @@ package com.lifeleveling.domain.player;
  */
 public enum PlayerRank {
 
-    /*
-     * Rango E: Novato / Becario
-     * Salario Base: 1.0x
-     * Gate: Inicio
-     */
     E("Novato", "🌱", 1.0),
-
-    /*
-     * Rango D: Iniciado
-     * Salario Base: 1.0x
-     * Gate: Gate 1
-     */
     D("Iniciado", "🐣", 1.0),
-
-    /*
-     * Rango C: Junior
-     * Salario Base: 1.5x
-     * Gate: Gate 2
-     */
     C("Junior", "🔨", 1.5),
-
-    /*
-     * Rango B: Mid-Level
-     * Salario Base: 2.5x
-     * Gate: Gate 4
-     */
     B("Mid-Level", "🔧", 2.5),
-
-    /*
-     * Rango A: Senior
-     * Salario Base: 4.0x
-     * Gate: Gate 7
-     */
     A("Senior", "🎩", 4.0),
-
-    /*
-     * Rango S: Architect
-     * Salario Base: 8.0x (Libertad Financiera)
-     * Gate: Gate 8
-     */
     S("Architect", "🏗️", 8.0),
-
-    /*
-     * Rango S+: Monarca (Endgame)
-     * Salario Base: 8.0x (Tope económico)
-     * Gate: Gate 10
-     */
     S_PLUS("Monarca", "👑", 8.0),
-
-    /*
-     * Rango S++: Trascendente (New Game+)
-     * Salario Base: 8.0x
-     */
     S_PLUS_PLUS("Dios", "🌟", 8.0);
 
     private final String displayName;
@@ -73,23 +29,26 @@ public enum PlayerRank {
         this.goldMultiplier = goldMultiplier;
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
+    public String getDisplayName() { return displayName; }
+    public String getIcon() { return icon; }
+    public double getGoldMultiplier() { return goldMultiplier; }
 
-    public String getIcon() {
-        return icon;
-    }
-
-    public double getGoldMultiplier() {
-        return goldMultiplier;
+    public boolean isAtLeast(PlayerRank other) {
+        return this.ordinal() >= other.ordinal();
     }
 
     /**
-     * Verifica si este rango es superior o igual a otro.
-     * Útil para desbloquear contenido (ej: Misiones Rango B).
+     * Convierte un Rango de Quest (Dificultad) en un Rango de Jugador (Estatus).
+     * Se usa al completar Gates para determinar el nuevo rango del jugador.
      */
-    public boolean isAtLeast(PlayerRank other) {
-        return this.ordinal() >= other.ordinal();
+    public static PlayerRank fromQuestRank(QuestRank questRank) {
+        if (questRank == null) return E;
+        try {
+            // Mapeo directo por nombre (E -> E, S_PLUS -> S_PLUS)
+            return PlayerRank.valueOf(questRank.name());
+        } catch (IllegalArgumentException e) {
+            // Fallback por seguridad
+            return E;
+        }
     }
 }
