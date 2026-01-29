@@ -8,6 +8,7 @@ import com.lifeleveling.domain.debuff.DebuffTracker;
 import com.lifeleveling.domain.debuff.DebuffType;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
+import com.lifeleveling.domain.item.ItemCategory;
 import com.lifeleveling.domain.quest.condition.GateTracker;
 import com.lifeleveling.domain.quest.shared.QuestReward;
 import com.lifeleveling.domain.quest.weekly.WeeklyManager;
@@ -195,6 +196,27 @@ public class Player {
     }
 
     // ========================================================================================
+    // COMPRA DE ITEMS (ECONOMÍA)
+    // ========================================================================================
+
+    public void buyItem(Item item) {
+        int finalPrice = item.price();
+
+        // [FASE 3.3] Aplicar descuento de Cafetera Espresso para bebidas sociales
+        if (item.category() == ItemCategory.DRINK_SOCIAL) {
+            // El inventario sabe si tenemos la cafetera equipada
+            double multiplier = inventory.getSocialDrinkDiscountMultiplier();
+            if (multiplier < 1.0) {
+                finalPrice = (int) Math.round(finalPrice * multiplier);
+                System.out.println("☕ ¡Cafetera Espresso rentabilizada! Precio reducido a " + finalPrice + " G");
+            }
+        }
+
+        spendGold(finalPrice);
+        inventory.recordPurchase(item);
+    }
+
+    // ========================================================================================
     // LEVELING
     // ========================================================================================
 
@@ -223,19 +245,29 @@ public class Player {
     // ========================================================================================
 
     public CodeSession registerCodeSession(double hours) {
-        CodeSession session = careerEngine.registerSession(hours);
+        // Verificar si tiene el Agente IA ("soft_ai_agent")
+        boolean hasAiAgent = inventory.hasItem("soft_ai_agent");
+
+        // Pasamos el flag al motor
+        CodeSession session = careerEngine.registerSession(hours, hasAiAgent);
+
         CareerReward reward = session.getReward();
+
+        // Aplicamos la XP (que ya incluye el bonus si corresponde)
         addXP(StatType.INTELLECT, reward.intellectXP());
         addXP(StatType.DISCIPLINE, reward.disciplineXP());
         if (session.isFlowAchieved()) addXP(StatType.WISDOM, reward.wisdomXP());
+
         takeWorkDamage(reward.hpCost(), hours);
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
+
         notifyQuestCompleted("CODE", hours);
+
         return session;
     }
 
     /**
-     * [NUEVO FASE 3.1] Registra una sesión de sueño y aplica las recompensas.
+     * Registra una sesión de sueño y aplica las recompensas.
      * Aplica automáticamente el bonus del Colchón Premium si está equipado.
      */
     public void registerSleepSession(int hours) {
@@ -419,7 +451,6 @@ public class Player {
     public void cureDebuff(DebuffType type) {
         if (debuffTracker.hasDebuff(type)) debuffTracker.removeDebuff(type);
     }
-    public void buyItem(Item item) { spendGold(item.price()); inventory.recordPurchase(item); }
     public void equipItem(String itemId) { inventory.equip(itemId); }
     public void unequipItem(com.lifeleveling.domain.item.ItemSlot slot) { inventory.unequip(slot); }
     public boolean unlockTitle(TitleType type) { return titleInventory.unlock(type); }
