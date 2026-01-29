@@ -34,8 +34,8 @@ public enum DailyQuestType {
             "Dieta Limpia",
             "Comer saludable sin ultraprocesados durante el día",
             InputType.BOOLEAN,
-            Map.of(),
-            0
+            Map.of(),  // Solo General XP
+            5   // [FIX] Corrección: +5 HP Base. (+10 si tienes Air Fryer se calcula al completar)
     ),
 
     /**
@@ -83,7 +83,7 @@ public enum DailyQuestType {
             "Completar rutina de cuidado personal (skincare o socializar)",
             InputType.BOOLEAN,
             Map.of(StatType.CHARISMA, 50),
-            0
+            10  // [FIX] Corrección: Autocuidado recupera +10 HP
     ),
 
     /**
@@ -94,10 +94,9 @@ public enum DailyQuestType {
             "Orden (10m)",
             "Ordenar y limpiar el espacio de vida al menos 10 minutos",
             InputType.BOOLEAN,
-            Map.of(StatType.WISDOM, 50),
+            Map.of(StatType.DISCIPLINE, 50), // [FIX] Corrección: Ordenar requiere Voluntad (DIS), no intelecto.
             0
-    ),
-    ;
+    );
 
     public enum InputType {
         BOOLEAN,
