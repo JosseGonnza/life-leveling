@@ -13,6 +13,7 @@ import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -26,7 +27,7 @@ public class Player {
     private HPState hpState;
     private int currentHP;
 
-    // Rango Profesional
+    // Rango Profesional (Multiplicador de Ingresos)
     private PlayerRank currentRank;
 
     private Stats stats;
@@ -83,6 +84,68 @@ public class Player {
                                  BurnoutLock lock) {
         return new Player(id, name, currentHP, rank, stats, wallet, inventory, titleInventory,
                 debuffTracker, gateTracker, careerEngine, lock);
+    }
+
+    // ========================================================================================
+    // CICLO DIARIO & TRIGGERS AUTOMÁTICOS [FASE 2.1]
+    // ========================================================================================
+
+    public void updateState(Instant now) {
+        // 1. Limpieza estándar
+        gateTracker.resetDailyFlags();
+        debuffTracker.cleanExpiredDebuffs(now);
+        manageBurnoutState(now);
+
+        // 2. [NUEVO] Comprobación de Triggers automáticos (Castigos por dejadez)
+        // Consultamos al histórico para ver si hemos fallado en nuestros deberes
+        int daysNoTidy = gateTracker.getDaysSinceLastQuestCompletion("TIDY");
+        int workStreak = gateTracker.getConsecutiveWorkDays();
+
+        // El DebuffTracker actúa como juez
+        List<Debuff> newDebuffs = debuffTracker.checkDailyResetTriggers(daysNoTidy, workStreak, now);
+
+        for (Debuff db : newDebuffs) {
+            applyDebuffDirect(db); // Aplicamos y notificamos
+            System.out.println("⚠️ CASTIGO AUTOMÁTICO: " + db.getType().getDisplayName());
+        }
+
+        // 3. Racha de pureza (Solo aumenta si no tienes debuffs activos ni burnout)
+        if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
+            gateTracker.incrementDebuffFreeStreak();
+        } else {
+            gateTracker.notifyDebuffReceived(); // Reset streak
+        }
+    }
+
+    // ========================================================================================
+    // INTEGRACIÓN CON QUESTS (EVENTOS)
+    // ========================================================================================
+
+    /**
+     * [NUEVO] Método auxiliar para chequear triggers inmediatos tras completar una Quest.
+     * Debe ser llamado por el servicio/UI cuando una DailyQuest se completa.
+     * Ej: Completar SLEEP con < 6 horas -> Fatiga inmediata.
+     */
+    public void notifyQuestCompleted(String questId, double inputValue) {
+        Instant now = Instant.now();
+
+        // Trigger: FATIGUE (Si duermes poco)
+        if ("SLEEP".equals(questId)) {
+            debuffTracker.checkSleepTrigger(inputValue, now)
+                    .ifPresent(this::applyDebuffDirect);
+        }
+
+        // Cura: CHAOS (Si completas TIDY, el caos desaparece)
+        if ("TIDY".equals(questId) && debuffTracker.hasDebuff(DebuffType.CHAOS)) {
+            debuffTracker.removeDebuff(DebuffType.CHAOS);
+            System.out.println("✨ El orden ha restaurado tu mente. Adiós Caos.");
+        }
+    }
+
+    // Helper privado para aplicar debuff y notificar al tracker de rachas
+    private void applyDebuffDirect(Debuff d) {
+        debuffTracker.applyDebuff(d);
+        gateTracker.notifyDebuffReceived();
     }
 
     // ========================================================================================
@@ -216,7 +279,7 @@ public class Player {
     private void triggerBurnout() {
         this.activeBurnoutLock = BurnoutLock.createNow();
         this.wallet = wallet.applyBurnoutTax();
-        gateTracker.recordBurnoutToday();
+        gateTracker.recordBurnoutToday(); // Memoria a corto plazo
         System.out.println("💔 ¡BURNOUT! HP a 0. Bloqueo de 24h y multa aplicada.");
     }
 
@@ -225,7 +288,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // PERFECT DAY & CICLO
+    // PERFECT DAY & BURNOUT STATE
     // ========================================================================================
 
     public void triggerPerfectDay() {
@@ -237,15 +300,6 @@ public class Player {
         this.addGeneralXP(100);
         debuffTracker.applyPerfectDayCure();
         gateTracker.setPerfectDayAchievedToday(true);
-    }
-
-    public void updateState(Instant now) {
-        gateTracker.resetDailyFlags();
-        debuffTracker.cleanExpiredDebuffs(now);
-        manageBurnoutState(now);
-        if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
-            gateTracker.incrementDebuffFreeStreak();
-        }
     }
 
     private void manageBurnoutState(Instant now) {
@@ -284,31 +338,35 @@ public class Player {
     public void consumeItem(Item item) {
         if (!inventory.hasItem(item.id())) throw new IllegalStateException("No tienes este item: " + item.name());
         System.out.println("🥣 Consumiendo: " + item.name());
+
         if (item.hpRecovery() > 0) heal(item.hpRecovery());
         if (item.hpDamage() > 0) takeDamage(item.hpDamage());
+
+        // [NUEVO] Delegamos lógica compleja de triggers al tracker (ej: TACHYCARDIA por 3er Monster)
+        debuffTracker.checkItemConsumptionTrigger(item.id(), Instant.now())
+                .ifPresent(this::applyDebuffDirect);
+
+        // Lógica estándar del item (campos estáticos causesDebuff/curesDebuff)
         applyItemSideEffects(item);
+
         inventory.removeItem(item.id());
     }
 
     private void applyItemSideEffects(Item item) {
         Instant now = Instant.now();
-        if (item.causesDebuff().isPresent()) applyDebuff(item.causesDebuff().get(), "Consumo " + item.name(), now);
+        // Aplica debuff si el item lo tiene configurado estáticamente (ej: Hamburguesa -> Pesadez)
+        if (item.causesDebuff().isPresent()) {
+            applyDebuff(item.causesDebuff().get(), "Consumo " + item.name(), now);
+        }
+        // Cura debuff si el item lo tiene configurado (ej: Almax -> Pesadez)
         if (item.curesDebuff().isPresent()) {
             DebuffType debuffToCure = item.curesDebuff().get();
-            if (item.isCaffeineSource()) handleCaffeineConsumption(debuffToCure, item.id());
-            else cureDebuff(debuffToCure);
-        }
-    }
-
-    private void handleCaffeineConsumption(DebuffType debuffToCure, String itemId) {
-        if (!debuffTracker.canCureWithCaffeine()) {
-            System.out.println("💓 Tu corazón va a mil. Cafeína inefectiva.");
-            return;
-        }
-        cureDebuff(debuffToCure);
-        if (itemId.equalsIgnoreCase("monster_energy")) {
-            debuffTracker.recordMonsterConsumed();
-            debuffTracker.checkItemConsumptionTrigger(itemId, Instant.now()).ifPresent(d -> applyDebuff(d.getType(), d.getSource(), d.getAppliedAt()));
+            // Verificación extra para cafeína vs taquicardia
+            if (item.isCaffeineSource() && !debuffTracker.canCureWithCaffeine()) {
+                System.out.println("💓 Tu corazón va a mil. Cafeína inefectiva.");
+            } else {
+                cureDebuff(debuffToCure);
+            }
         }
     }
 
