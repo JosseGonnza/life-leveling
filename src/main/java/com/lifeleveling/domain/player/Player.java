@@ -25,23 +25,22 @@ public class Player {
     private final UUID id;
     private final String name;
 
-    // Componentes del Jugador (Value Objects inmutables)
+    // Componentes del Jugador
     private HPState hpState;
     private int currentHP;
-    private Stats stats; // Stats Base (Real XP)
+    private Stats stats;
     private Wallet wallet;
 
-    // Componentes mutables (Entidades internas)
+    // Componentes mutables
     private final Inventory inventory;
     private final TitleInventory titleInventory;
     private final DebuffTracker debuffTracker;
     private final GateTracker gateTracker;
-    private final CareerEngine careerEngine;  // [CareerEngine] Gestiona sesiones de código
+    private final CareerEngine careerEngine;
 
-    // Estado de Burnout (Bloqueo temporal)
+    // Estado de Burnout
     private BurnoutLock activeBurnoutLock;
 
-    // Constructor privado para forzar uso de métodos factoría
     private Player(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                    Inventory inventory, TitleInventory titleInventory,
                    DebuffTracker debuffTracker, GateTracker gateTracker,
@@ -69,19 +68,18 @@ public class Player {
         return new Player(
                 UUID.randomUUID(),
                 name,
-                100, // HP Inicial
+                100,
                 Stats.initial(),
                 Wallet.empty(),
                 new Inventory(),
                 new TitleInventory(),
                 new DebuffTracker(),
                 new GateTracker(),
-                new CareerEngine(),  // [CareerEngine] Inicializar
+                new CareerEngine(),
                 null
         );
     }
 
-    // Para reconstruir desde persistencia (JSON/DB)
     public static Player restore(UUID id, String name, int currentHP, Stats stats, Wallet wallet,
                                  Inventory inventory, TitleInventory titleInventory,
                                  DebuffTracker debuffTracker, GateTracker gateTracker,
@@ -141,9 +139,7 @@ public class Player {
     }
 
     public void spendGold(int amount) {
-        if (!wallet.canAfford(amount)) {
-            throw new IllegalStateException("No tienes suficiente oro");
-        }
+        if (!wallet.canAfford(amount)) throw new IllegalStateException("No tienes suficiente oro");
         this.wallet = wallet.subtract(amount);
     }
 
@@ -181,27 +177,61 @@ public class Player {
         return activeBurnoutLock != null && !activeBurnoutLock.hasExpired(Instant.now());
     }
 
-    public void tryClearBurnout() {
-        if (activeBurnoutLock != null && activeBurnoutLock.hasExpired(Instant.now()) && currentHP > 0) {
+    // ========================================================================================
+    // CICLO DIARIO & BURNOUT MANAGEMENT
+    // ========================================================================================
+
+    public void updateState(Instant now) {
+        // 1. Limpiar debuffs caducados
+        debuffTracker.cleanExpiredDebuffs(now);
+
+        // 2. [FIX] Gestionar Burnout (Salida o Extensión Hospitalaria)
+        manageBurnoutState(now);
+
+        // 3. Verificar Racha Limpia (GateTracker)
+        if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
+            gateTracker.incrementDebuffFreeStreak();
+        }
+    }
+
+    /**
+     * Gestiona la lógica de salida o renovación del Burnout.
+     * Implementa la regla de Hospitalización Prolongada (Tax 5% diario).
+     */
+    private void manageBurnoutState(Instant now) {
+        // Si no hay burnout activo o no ha expirado el tiempo mínimo, no hacemos nada
+        if (activeBurnoutLock == null || !activeBurnoutLock.hasExpired(now)) {
+            return;
+        }
+
+        // El tiempo ha expirado. Verificamos condición de salud.
+        if (currentHP > 0) {
+            // ✅ PACIENTE RECUPERADO: Salimos del Burnout
+            System.out.println("🔥 Burnout superado. ¡Bienvenido de vuelta!");
             this.activeBurnoutLock = null;
+        } else {
+            // 🏥 PACIENTE CRÍTICO: Hospitalización Extendida
+            // Regla: 5% del oro por cada 24h extra.
+            int tax = (int) (wallet.currentGold() * 0.05);
+            if (tax > 0) {
+                this.wallet = wallet.subtract(tax);
+                System.out.println("🏥 Hospitalización extendida (HP 0). Se cobra estancia: -" + tax + " G");
+            }
+
+            // Renovamos el lock por otras 24 horas (Ciclo diario de hospital)
+            this.activeBurnoutLock = BurnoutLock.trigger(now);
         }
     }
 
     // ========================================================================================
-    // GESTIÓN DE DEBUFFS (Con Integración GateTracker - Fase 9)
+    // GESTIÓN DE DEBUFFS
     // ========================================================================================
 
     public void applyDebuff(DebuffType type, String source, Instant now) {
-        // 1. Verificar Inmunidad (Títulos)
-        if (titleInventory.hasImmunityTo(type.name())) {
-            return;
-        }
+        if (titleInventory.hasImmunityTo(type.name())) return;
 
-        // 2. Aplicar Debuff
         Debuff debuff = Debuff.create(type, source, now);
         debuffTracker.applyDebuff(debuff);
-
-        // 3. [Fase 9] Notificar al Tracker de Progreso (Romper Racha)
         gateTracker.notifyDebuffReceived();
     }
 
@@ -215,74 +245,40 @@ public class Player {
         return debuffTracker;
     }
 
-    /**
-     * Método para el ciclo diario (Clean Up).
-     * Se llama al iniciar la app o cambiar de día.
-     */
-    public void updateState(Instant now) {
-        // Limpiar debuffs caducados
-        debuffTracker.cleanExpiredDebuffs(now);
-        // Intentar salir de Burnout
-        tryClearBurnout();
-
-        // [Fase 9] Verificar si merecemos sumar racha limpia
-        if (debuffTracker.getActiveDebuffs().isEmpty()) {
-            gateTracker.incrementDebuffFreeStreak();
-        }
-    }
-
     // ========================================================================================
-    // CONSUMO DE ITEMS (Fase 8)
+    // CONSUMO DE ITEMS
     // ========================================================================================
 
     public void consumeItem(Item item) {
-        // 1. Verificar existencia
         if (!inventory.hasItem(item.id())) {
             throw new IllegalStateException("No tienes este item en el inventario: " + item.name());
         }
 
         System.out.println("🥣 Consumiendo: " + item.name());
 
-        // 2. Efectos base (HP)
-        if (item.hpRecovery() > 0) {
-            this.heal(item.hpRecovery());
-        }
-        if (item.hpDamage() > 0) {
-            this.takeDamage(item.hpDamage());
-        }
+        if (item.hpRecovery() > 0) heal(item.hpRecovery());
+        if (item.hpDamage() > 0) takeDamage(item.hpDamage());
 
-        // 3. Efectos secundarios (Debuffs/Curas)
         applyItemSideEffects(item);
-
-        // 4. Eliminar del inventario
         inventory.removeItem(item.id());
     }
 
     private void applyItemSideEffects(Item item) {
         Instant now = Instant.now();
-
-        // A. Causa Debuff
         if (item.causesDebuff().isPresent()) {
-            DebuffType debuffToApply = item.causesDebuff().get();
-            this.applyDebuff(debuffToApply, "Consumo de " + item.name(), now);
+            applyDebuff(item.causesDebuff().get(), "Consumo de " + item.name(), now);
         }
-
-        // B. Cura Debuff
         if (item.curesDebuff().isPresent()) {
             DebuffType debuffToCure = item.curesDebuff().get();
-
-            // Lógica Especial: Cafeína
             if (item.isCaffeineSource()) {
                 handleCaffeineConsumption(debuffToCure, item.id());
             } else {
-                // Cura estándar
                 this.cureDebuff(debuffToCure);
             }
         }
     }
 
     private void handleCaffeineConsumption(DebuffType debuffToCure, String itemId) {
-        // Usamos el helper del tracker
         if (!debuffTracker.canCureWithCaffeine()) {
             System.out.println("💓 Tu corazón va a mil. La cafeína no surte efecto.");
             return;
@@ -290,7 +286,6 @@ public class Player {
 
         this.cureDebuff(debuffToCure);
 
-        // Riesgo de sobredosis (Monster)
         if (itemId.equalsIgnoreCase("monster_energy")) {
             debuffTracker.recordMonsterConsumed();
             Optional<Debuff> overdose = debuffTracker.checkItemConsumptionTrigger(itemId, Instant.now());
@@ -299,7 +294,7 @@ public class Player {
     }
 
     // ========================================================================================
-    // INVENTARIO & EQUIPAMIENTO
+    // INVENTARIO & TÍTULOS
     // ========================================================================================
 
     public void buyItem(Item item) {
@@ -307,136 +302,51 @@ public class Player {
         inventory.recordPurchase(item);
     }
 
-    public void equipItem(String itemId) {
-        inventory.equip(itemId);
-    }
+    public void equipItem(String itemId) { inventory.equip(itemId); }
+    public void unequipItem(com.lifeleveling.domain.item.ItemSlot slot) { inventory.unequip(slot); }
+    public Inventory getInventory() { return inventory; }
 
-    public void unequipItem(com.lifeleveling.domain.item.ItemSlot slot) {
-        inventory.unequip(slot);
-    }
-
-    public Inventory getInventory() {
-        return inventory;
-    }
-
-    // ========================================================================================
-    // GESTIÓN DE TÍTULOS
-    // ========================================================================================
-
-    public boolean unlockTitle(TitleType type) {
-        return titleInventory.unlock(type);
-    }
-
-    public void equipTitle(TitleType type) {
-        titleInventory.equip(type, getLevel());
-    }
-
-    public boolean unequipTitle(TitleType type) {
-        return titleInventory.unequip(type);
-    }
-
-    public void swapTitle(TitleType oldType, TitleType newType) {
-        titleInventory.swap(oldType, newType, getLevel());
-    }
-
-    public boolean hasTitle(TitleType type) {
-        return titleInventory.hasTitle(type);
-    }
-
-    public boolean isTitleEquipped(TitleType type) {
-        return titleInventory.isEquipped(type);
-    }
-
-    public TitleInventory getTitleInventory() {
-        return titleInventory;
-    }
+    public boolean unlockTitle(TitleType type) { return titleInventory.unlock(type); }
+    public void equipTitle(TitleType type) { titleInventory.equip(type, getLevel()); }
+    public boolean unequipTitle(TitleType type) { return titleInventory.unequip(type); }
+    public void swapTitle(TitleType old, TitleType n) { titleInventory.swap(old, n, getLevel()); }
+    public boolean hasTitle(TitleType type) { return titleInventory.hasTitle(type); }
+    public boolean isTitleEquipped(TitleType type) { return titleInventory.isEquipped(type); }
+    public TitleInventory getTitleInventory() { return titleInventory; }
 
     // ========================================================================================
     // GETTERS
     // ========================================================================================
 
-    public int getCurrentHP() {
-        return currentHP;
-    }
-
-    public int getCurrentGold() {
-        return wallet.currentGold();
-    }
-
-    public Stats getBaseStats() {
-        return stats;
-    }
-
-    public Stats getEffectiveStats() {
-        return stats.applyBonuses(inventory.getTotalStatBonuses());
-    }
-
-    public HPState getHpState() {
-        return hpState;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public GateTracker getGateTracker() {
-        return gateTracker;
-    }
+    public int getCurrentHP() { return currentHP; }
+    public int getCurrentGold() { return wallet.currentGold(); }
+    public Stats getBaseStats() { return stats; }
+    public Stats getEffectiveStats() { return stats.applyBonuses(inventory.getTotalStatBonuses()); }
+    public HPState getHpState() { return hpState; }
+    public UUID getId() { return id; }
+    public String getName() { return name; }
+    public GateTracker getGateTracker() { return gateTracker; }
 
     // ========================================================================================
-    // CAREER ENGINE (Sesiones de Código)
+    // CAREER ENGINE
     // ========================================================================================
 
-    /**
-     * Registra una sesión de código (múltiples entradas permitidas por día).
-     *
-     * Este método:
-     * 1. Registra la sesión en CareerEngine (calcula XP y Flow)
-     * 2. Aplica XP (INT, DIS, y WIS si Flow) con todos los multiplicadores
-     * 3. Aplica daño HP (3/hora) con mitigación de equipo
-     * 4. Actualiza horas totales en GateTracker (para títulos)
-     *
-     * @param hours Horas trabajadas en esta sesión (mínimo 0.5, máximo 12)
-     * @return La sesión creada con sus recompensas
-     * @throws IllegalArgumentException si las horas son inválidas o exceden el límite diario
-     */
     public CodeSession registerCodeSession(double hours) {
-        // 1. Registrar en CareerEngine (calcula XP, HP, Flow)
         CodeSession session = careerEngine.registerSession(hours);
         CareerReward reward = session.getReward();
 
-        // 2. Aplicar XP (con multiplicadores de HP state, debuffs, títulos)
         addXP(StatType.INTELLECT, reward.intellectXP());
         addXP(StatType.DISCIPLINE, reward.disciplineXP());
         if (session.isFlowAchieved()) {
             addXP(StatType.WISDOM, reward.wisdomXP());
         }
 
-        // 3. Aplicar daño HP (con mitigación de equipo: silla, periféricos, etc.)
         takeWorkDamage(reward.hpCost());
-
-        // 4. Actualizar horas totales en GateTracker (para títulos como Code Monkey, 10x Dev)
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
 
         return session;
     }
 
-    /**
-     * ¿Se ha registrado al menos una sesión de código hoy?
-     * Útil para marcar la DailyQuest CODE como completada.
-     */
-    public boolean hasCodeActivityToday() {
-        return careerEngine.hasActivityToday();
-    }
-
-    /**
-     * Obtiene el CareerEngine para consultar sesiones y estadísticas.
-     */
-    public CareerEngine getCareerEngine() {
-        return careerEngine;
-    }
+    public boolean hasCodeActivityToday() { return careerEngine.hasActivityToday(); }
+    public CareerEngine getCareerEngine() { return careerEngine; }
 }
