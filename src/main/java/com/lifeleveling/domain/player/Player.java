@@ -166,9 +166,20 @@ public class Player {
         System.out.println("🥣 Consumiendo: " + item.name());
         Instant now = Instant.now();
 
+        // [FASE 5.2] Integración con Monster / Taquicardia
+        // Si el item es una fuente de cafeína potente (Monster), registramos el consumo en el tracker.
+        // El tracker se encarga de la lógica de "3 por semana" y aplica el debuff si corresponde.
+        if (item.isCaffeineSource()) {
+            // Convertimos Instant a LocalDate para la lógica semanal
+            LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+            debuffTracker.recordMonsterConsumption(today);
+        }
+
         if (item.hpRecovery() > 0) heal(item.hpRecovery());
         if (item.hpDamage() > 0) takeDamage(item.hpDamage());
 
+        // Esta línea antigua ya no es necesaria para el Monster porque lo gestionamos arriba,
+        // pero la dejamos por si hay otros items con triggers específicos.
         debuffTracker.checkItemConsumptionTrigger(item.id(), now).ifPresent(this::applyDebuffDirect);
 
         applyItemSideEffects(item);
