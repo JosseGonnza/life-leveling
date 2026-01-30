@@ -404,6 +404,31 @@ public class Player {
         this.hpState = HPState.fromHP(this.currentHP);
         if (this.currentHP == 0 && activeBurnoutLock == null) triggerBurnout();
     }
+    public void applyUserQuestFailure(com.lifeleveling.domain.quest.user.UserQuest quest) {
+        int hpDamage = quest.rank().getMoralDamage();
+        if (hpDamage <= 0) return;
+        System.out.println("❌ Quest Fallida: " + quest.name() + " (-" + hpDamage + " HP)");
+
+        int predictedHP = this.currentHP - hpDamage;
+        int overflow = 0;
+        if (predictedHP < 0) {
+            overflow = Math.abs(predictedHP);
+        }
+        takeDamage(hpDamage);
+
+        if (overflow > 0) {
+            int goldPenalty = overflow * 10;
+            System.out.println("💸 DAÑO MORAL CRÍTICO: El exceso de daño (" + overflow + " HP) se convierte en multa de -" + goldPenalty + " G");
+            try {
+                // Intentamos cobrar la multa completa
+                this.wallet = wallet.subtract(goldPenalty);
+            } catch (IllegalStateException | IllegalArgumentException e) {
+                // Si no tiene suficiente oro (Wallet tira excepción), BANCARROTA TOTAL
+                System.out.println("💸 ¡BANCARROTA! No tienes suficiente oro para cubrir la multa moral. Saldo a 0.");
+                this.wallet = com.lifeleveling.domain.player.Wallet.empty();
+            }
+        }
+    }
     public void takeWorkDamage(int baseDamage, double hours) {
         int mitigationRate = inventory.getHourlyWorkDamageMitigation();
         int totalMitigation = (int) Math.round(hours * mitigationRate);
