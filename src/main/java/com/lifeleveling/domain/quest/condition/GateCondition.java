@@ -25,10 +25,11 @@ public sealed interface GateCondition
         NoBurnout,
         DebuffFreeStreak,
         WeeklyQuestsCompleted,
-        // [NUEVO] Nuevas condiciones específicas Fase 3
         CareerHoursInPeriod,
         GymSessionsInPeriod,
-        PerfectDaysInPeriod {
+        PerfectDaysInPeriod,
+        FinancialDiscipline
+{
 
     /**
      * Evalúa si la condición está cumplida.

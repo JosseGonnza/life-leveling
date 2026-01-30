@@ -1,5 +1,7 @@
 package com.lifeleveling.domain.quest.condition;
 
+import com.lifeleveling.domain.item.ItemCatalog;
+import com.lifeleveling.domain.item.ItemCategory;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 
@@ -23,6 +25,18 @@ public class GateTracker {
 
     // --- CONTADORES EN TIEMPO REAL (STATEFUL) ---
     private double currentTotalCareerHours = 0.0;
+
+    // ========================================================================================
+    // [NUEVO] FASE 4.2: TRACKER FINANCIERO (THE VAULT)
+    // ========================================================================================
+
+    /** Días consecutivos cumpliendo la regla: >= 20k Gold Y Sin compras de Lujo. */
+    private int consecutiveDaysAbove20k = 0;
+
+    /** Fecha de la última compra de categoría LUXURY (para resetear la racha). */
+    private LocalDate lastLuxuryPurchaseDate = null;
+
+    // ========================================================================================
 
     // Rachas vivas
     private int consecutiveWeeksWithFullWeeklies = 0;
@@ -69,59 +83,77 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // QUERIES HISTÓRICAS (SOLUCIÓN A TUS ERRORES DE COMPILACIÓN)
+    // LÓGICA DE ACTUALIZACIÓN DIARIA (Fase 4.2 y Rachas)
     // ========================================================================================
 
     /**
-     * [FIX] Soluciona error en HPThreshold.java
-     * Obtiene el HP más bajo registrado en los últimos X días.
+     * [NUEVO] FASE 4.2: Registra el balance final del día para 'The Vault'.
+     * Incrementa la racha si tienes >= 20,000 G y NO has comprado lujos hoy.
+     * @param endOfDayGold El oro que tiene el jugador al momento del reset (00:00).
      */
+    public void recordDailyBalance(int endOfDayGold) {
+        // Verificamos si hoy (la fecha actual del sistema) se compró lujo
+        boolean luxuryBoughtToday = lastLuxuryPurchaseDate != null
+                && lastLuxuryPurchaseDate.equals(LocalDate.now());
+
+        if (endOfDayGold >= 20_000 && !luxuryBoughtToday) {
+            consecutiveDaysAbove20k++;
+            // System.out.println("💰 The Vault Tracker: Día " + consecutiveDaysAbove20k + "/7 completado.");
+        } else {
+            consecutiveDaysAbove20k = 0;
+            // System.out.println("💰 The Vault Tracker: Racha reiniciada (Saldo bajo o Lujo comprado).");
+        }
+    }
+
+    /**
+     * [NUEVO] FASE 4.2: Registra una compra de lujo.
+     * Este método debe llamarse desde Inventory.addItem() si la categoría es LUXURY.
+     */
+    public void recordLuxuryPurchase() {
+        this.lastLuxuryPurchaseDate = LocalDate.now();
+        this.consecutiveDaysAbove20k = 0; // Castigo inmediato: Adiós racha
+    }
+
+    // ========================================================================================
+    // QUERIES HISTÓRICAS
+    // ========================================================================================
+
     public int getMinHPInLastDays(int days) {
         LocalDate startDate = LocalDate.now().minusDays(days);
         return history.tailMap(startDate).values().stream()
                 .mapToInt(DailyHistory::minHP)
-                .min().orElse(100); // Si no hay datos, asumimos 100
+                .min().orElse(100);
     }
 
-    /**
-     * [FIX] Soluciona error en BurnoutTrigger.java
-     * Cuenta cuántos Burnouts han ocurrido en los últimos 30 días (Histórico + Hoy).
-     */
     public int getBurnoutsInLastMonth() {
         LocalDate startDate = LocalDate.now().minusDays(30);
-
-        // 1. Contar históricos (ayer hacia atrás)
         int count = (int) history.tailMap(startDate).values().stream()
                 .filter(DailyHistory::hadBurnout)
                 .count();
-
-        // 2. Sumar el de hoy si acaba de ocurrir
         if (burnoutOccurredToday) {
             count++;
         }
-
         return count;
     }
 
-    /**
-     * [FIX] Soluciona error en NoBurnout.java
-     * Verifica si hubo algún Burnout desde que empezó la Gate (usando su ID para buscar la fecha).
-     */
     public boolean hadBurnoutDuringGate(String gateId) {
         LocalDate startDate = getTimeLimitStartDate(gateId);
-        if (startDate == null) return false; // Si no hay fecha de inicio, no podemos evaluar, asumimos false
-
-        // Revisar histórico desde esa fecha
+        if (startDate == null) return false;
         boolean historic = history.tailMap(startDate).values().stream()
                 .anyMatch(DailyHistory::hadBurnout);
-
-        // Revisar hoy (si la gate empezó hoy o antes)
         boolean today = burnoutOccurredToday && !LocalDate.now().isBefore(startDate);
-
         return historic || today;
     }
 
-    // --- OTRAS QUERIES DE FASE 3 ---
+    public boolean hasCategoryPurchaseInLastDays(ItemCategory category, int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+
+        return history.tailMap(startDate).values().stream()
+                .flatMap(day -> day.consumablesBought().stream())
+                .map(ItemCatalog::findById)
+                .flatMap(Optional::stream)
+                .anyMatch(item -> item.category() == category);
+    }
 
     public double getCareerHoursInLastDays(int days) {
         LocalDate startDate = LocalDate.now().minusDays(days);
@@ -205,10 +237,6 @@ public class GateTracker {
         return currentPerfectDayStreak;
     }
 
-    /**
-     * Incrementa la racha de Perfect Days.
-     * Llama a este método cuando se logra un Perfect Day.
-     */
     public void incrementPerfectDayStreak() {
         currentPerfectDayStreak++;
         if (currentPerfectDayStreak > maxPerfectDayStreak) {
@@ -216,24 +244,14 @@ public class GateTracker {
         }
     }
 
-    /**
-     * Resetea la racha de Perfect Days a 0.
-     * Llama a este método cuando NO se logra Perfect Day un día.
-     */
     public void resetPerfectDayStreak() {
         currentPerfectDayStreak = 0;
     }
 
-    /**
-     * Obtiene el récord histórico de Perfect Days seguidos.
-     */
     public int getMaxPerfectDayStreak() {
         return maxPerfectDayStreak;
     }
 
-    /**
-     * Calcula la racha de Perfect Days desde el histórico (backup/verificación).
-     */
     public int calculatePerfectDayStreakFromHistory() {
         LocalDate dateCursor = LocalDate.now().minusDays(1);
         int streak = 0;
@@ -254,7 +272,7 @@ public class GateTracker {
 
     public void recordBurnoutToday() {
         this.burnoutOccurredToday = true;
-        notifyDebuffReceived(); // Rompe racha de pureza
+        notifyDebuffReceived();
     }
     public boolean didBurnoutOccurToday() { return burnoutOccurredToday; }
 
@@ -287,4 +305,8 @@ public class GateTracker {
         if (allCompleted) consecutiveWeeksWithFullWeeklies++;
         else consecutiveWeeksWithFullWeeklies = 0;
     }
+
+    // [NUEVO] Getters para The Vault
+    public int getConsecutiveDaysAbove20k() { return consecutiveDaysAbove20k; }
+    public LocalDate getLastLuxuryPurchaseDate() { return lastLuxuryPurchaseDate; }
 }
