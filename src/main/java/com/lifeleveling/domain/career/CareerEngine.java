@@ -3,9 +3,7 @@ package com.lifeleveling.domain.career;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 public class CareerEngine {
 
@@ -21,12 +19,13 @@ public class CareerEngine {
     private int todayHPCost;
     private int todayFlowCount;
 
-    // [NUEVO] Tracker para el Agente IA
+    // Tracker para el Agente IA
     private double aiAgentHoursUsedToday;
 
-    // Histórico global
+    // Histórico global (Persistencia)
     private double totalCareerHours;
     private int totalFlowSessions;
+    private int totalSessions; // [NUEVO] Contador total de sesiones para Títulos
 
     public CareerEngine() {
         this.todaySessions = new ArrayList<>();
@@ -34,22 +33,23 @@ public class CareerEngine {
         resetDailyCounters();
         this.totalCareerHours = 0.0;
         this.totalFlowSessions = 0;
+        this.totalSessions = 0;
     }
 
-    public CareerEngine(double totalCareerHours, int totalFlowSessions) {
-        this();
+    /**
+     * Constructor para restaurar estado (Persistencia).
+     */
+    public CareerEngine(double totalCareerHours, int totalFlowSessions, int totalSessions) {
+        this(); // Inicializa las listas y fechas
         this.totalCareerHours = totalCareerHours;
         this.totalFlowSessions = totalFlowSessions;
+        this.totalSessions = totalSessions;
     }
 
     // ========================================================================================
     // CORE: REGISTRO DE SESIONES
     // ========================================================================================
 
-    /**
-     * Registra una nueva sesión de código.
-     * [ACTUALIZADO] Ahora acepta si el usuario tiene el Agente IA activo.
-     */
     public CodeSession registerSession(double hours, boolean hasAiAgent) {
         return registerSession(hours, Instant.now(), hasAiAgent);
     }
@@ -58,33 +58,30 @@ public class CareerEngine {
         checkAndResetIfNewDay();
         validateDailyLimit(hours);
 
-        // 1. Crear sesión base (Cálculo estándar)
+        // 1. Crear sesión base
         CodeSession session = CodeSession.register(hours, registeredAt);
 
-        // 2. [NUEVO] Aplicar Bonus de Agente IA
+        // 2. Aplicar Bonus de Agente IA (Tu lógica existente)
         if (hasAiAgent) {
-            // Límite de 2.0h diarias bonificadas
             double quotaRemaining = Math.max(0, 2.0 - aiAgentHoursUsedToday);
             double bonusHours = Math.min(hours, quotaRemaining);
 
             if (bonusHours > 0) {
-                // Bonus = 20% de la XP base por esas horas
                 int bonusXP = (int) Math.round(bonusHours * CodeSessionConstants.XP_INT_PER_HOUR * 0.20);
-
-                // Actualizar la sesión con la nueva recompensa
                 session = session.withReward(session.getReward().plusIntellect(bonusXP));
                 System.out.println("🤖 Agente IA activo: +" + bonusXP + " INT (" + String.format("%.1f", bonusHours) + "h bonificadas)");
             }
-            // Actualizar uso del día (incluso si no hubo bonus, se gasta cuota si pasamos de 2h)
             aiAgentHoursUsedToday += hours;
         }
 
-        // 3. Registrar
+        // 3. Registrar en el día actual
         todaySessions.add(session);
         updateDailyTotals(session);
 
-        // 4. Actualizar histórico
+        // 4. Actualizar histórico GLOBAL (Aquí es donde sumamos para los Títulos)
         totalCareerHours += hours;
+        totalSessions++; // [NUEVO] Incrementamos el contador de sesiones totales
+
         if (session.isFlowAchieved()) {
             totalFlowSessions++;
         }
@@ -129,12 +126,33 @@ public class CareerEngine {
         todayWisdomXP = 0;
         todayHPCost = 0;
         todayFlowCount = 0;
-        aiAgentHoursUsedToday = 0.0; // [NUEVO] Reset del agente
+        aiAgentHoursUsedToday = 0.0;
     }
 
-    // ... (Resto de getters y métodos de persistencia se mantienen igual) ...
+    // ========================================================================================
+    // GETTERS PARA TITLE UNLOCK CHECKER
+    // ========================================================================================
+
+    public double getTotalCareerHours() {
+        return totalCareerHours;
+    }
+
+    public int getTotalFlowSessions() {
+        return totalFlowSessions;
+    }
+
+    /**
+     * [NUEVO] Necesario para el título 'Hello World' y 'Code Monkey'.
+     */
+    public int getTotalSessions() {
+        return totalSessions;
+    }
+
+    public boolean hasActivityToday() {
+        checkAndResetIfNewDay();
+        return !todaySessions.isEmpty();
+    }
+
+    // Getters de acumulados diarios (Opcional, si los usas en la UI)
     public double getTodayTotalHours() { checkAndResetIfNewDay(); return todayTotalHours; }
-    public boolean hasActivityToday() { checkAndResetIfNewDay(); return !todaySessions.isEmpty(); }
-    public double getTotalCareerHours() { return totalCareerHours; }
-    // ... etc ...
 }

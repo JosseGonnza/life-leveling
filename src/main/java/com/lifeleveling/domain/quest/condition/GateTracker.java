@@ -2,6 +2,7 @@ package com.lifeleveling.domain.quest.condition;
 
 import com.lifeleveling.domain.item.ItemCatalog;
 import com.lifeleveling.domain.item.ItemCategory;
+import com.lifeleveling.domain.quest.daily.DailyQuestType; // [NUEVO] Import necesario
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 
@@ -11,7 +12,7 @@ import java.util.*;
 /**
  * GateTracker: El cerebro histórico del jugador.
  * Gestiona el progreso de Gates, Rachas y Estadísticas acumuladas.
- * Provee datos a las GateConditions para evaluar el éxito.
+ * Provee datos a las GateConditions y al TitleUnlockChecker.
  */
 public class GateTracker {
 
@@ -26,14 +27,14 @@ public class GateTracker {
     // --- CONTADORES EN TIEMPO REAL (STATEFUL) ---
     private double currentTotalCareerHours = 0.0;
 
+    // [NUEVO FASE 7] Contador de gasto total para títulos de Riqueza (Ballena)
+    private long totalGoldSpent = 0;
+
     // ========================================================================================
-    // [NUEVO] FASE 4.2: TRACKER FINANCIERO (THE VAULT)
+    // FASE 4.2: TRACKER FINANCIERO (THE VAULT)
     // ========================================================================================
 
-    /** Días consecutivos cumpliendo la regla: >= 20k Gold Y Sin compras de Lujo. */
     private int consecutiveDaysAbove20k = 0;
-
-    /** Fecha de la última compra de categoría LUXURY (para resetear la racha). */
     private LocalDate lastLuxuryPurchaseDate = null;
 
     // ========================================================================================
@@ -42,9 +43,9 @@ public class GateTracker {
     private int consecutiveWeeksWithFullWeeklies = 0;
     private int currentDebuffFreeStreak = 0;
     private int currentPerfectDayStreak = 0;
-    private int maxPerfectDayStreak = 0;  // Récord histórico
+    private int maxPerfectDayStreak = 0;
 
-    // Flags diarios (Memoria a corto plazo, se resetean a las 00:00)
+    // Flags diarios
     private boolean perfectDayAchievedToday = false;
     private boolean burnoutOccurredToday = false;
 
@@ -62,12 +63,12 @@ public class GateTracker {
             boolean hadBurnout,
             boolean hadDebuffsActive,
             List<String> consumablesBought,
-            Set<String> completedQuestIds, // IDs de quests completadas (ej: "TIDY", "GYM")
+            Set<String> completedQuestIds,
             Map<QuestRank, Integer> completedQuestsCount
     ) {}
 
     // ========================================================================================
-    // MÉTODOS DE INGESTA (GUARDAR DATOS)
+    // MÉTODOS DE INGESTA
     // ========================================================================================
 
     public void addDailyHistory(DailyHistory day) {
@@ -82,40 +83,34 @@ public class GateTracker {
         this.currentTotalCareerHours = hours;
     }
 
-    // ========================================================================================
-    // LÓGICA DE ACTUALIZACIÓN DIARIA (Fase 4.2 y Rachas)
-    // ========================================================================================
-
     /**
-     * [NUEVO] FASE 4.2: Registra el balance final del día para 'The Vault'.
-     * Incrementa la racha si tienes >= 20,000 G y NO has comprado lujos hoy.
-     * @param endOfDayGold El oro que tiene el jugador al momento del reset (00:00).
+     * [NUEVO FASE 7] Registra gasto de oro para estadísticas acumuladas.
+     * Llamar desde Player.spendGold().
      */
+    public void recordGoldSpent(int amount) {
+        if (amount > 0) {
+            this.totalGoldSpent += amount;
+        }
+    }
+
     public void recordDailyBalance(int endOfDayGold) {
-        // Verificamos si hoy (la fecha actual del sistema) se compró lujo
         boolean luxuryBoughtToday = lastLuxuryPurchaseDate != null
                 && lastLuxuryPurchaseDate.equals(LocalDate.now());
 
         if (endOfDayGold >= 20_000 && !luxuryBoughtToday) {
             consecutiveDaysAbove20k++;
-            // System.out.println("💰 The Vault Tracker: Día " + consecutiveDaysAbove20k + "/7 completado.");
         } else {
             consecutiveDaysAbove20k = 0;
-            // System.out.println("💰 The Vault Tracker: Racha reiniciada (Saldo bajo o Lujo comprado).");
         }
     }
 
-    /**
-     * [NUEVO] FASE 4.2: Registra una compra de lujo.
-     * Este método debe llamarse desde Inventory.addItem() si la categoría es LUXURY.
-     */
     public void recordLuxuryPurchase() {
         this.lastLuxuryPurchaseDate = LocalDate.now();
-        this.consecutiveDaysAbove20k = 0; // Castigo inmediato: Adiós racha
+        this.consecutiveDaysAbove20k = 0;
     }
 
     // ========================================================================================
-    // QUERIES HISTÓRICAS
+    // QUERIES HISTÓRICAS BÁSICAS
     // ========================================================================================
 
     public int getMinHPInLastDays(int days) {
@@ -130,9 +125,7 @@ public class GateTracker {
         int count = (int) history.tailMap(startDate).values().stream()
                 .filter(DailyHistory::hadBurnout)
                 .count();
-        if (burnoutOccurredToday) {
-            count++;
-        }
+        if (burnoutOccurredToday) count++;
         return count;
     }
 
@@ -147,7 +140,6 @@ public class GateTracker {
 
     public boolean hasCategoryPurchaseInLastDays(ItemCategory category, int days) {
         LocalDate startDate = LocalDate.now().minusDays(days);
-
         return history.tailMap(startDate).values().stream()
                 .flatMap(day -> day.consumablesBought().stream())
                 .map(ItemCatalog::findById)
@@ -206,7 +198,137 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // RACHAS (STREAKS)
+    // QUERIES AVANZADAS (FASE 7 - TITLE UNLOCK CHECKER)
+    // ========================================================================================
+
+    public long getTotalGoldSpent() {
+        return totalGoldSpent;
+    }
+
+    /**
+     * Cuenta cuántas veces se ha completado una quest en toda la historia.
+     * Útil para títulos como "Lobo Solitario" (50 GYM).
+     */
+    public int getTotalCompletions(String questId) {
+        return (int) history.values().stream()
+                .filter(day -> day.completedQuestIds() != null && day.completedQuestIds().contains(questId))
+                .count();
+    }
+
+    public int getTotalPagesRead() {
+        return history.values().stream()
+                .mapToInt(DailyHistory::pagesRead)
+                .sum();
+    }
+
+    /**
+     * Calcula la racha actual de un hábito específico.
+     * Mira hacia atrás desde hoy/ayer hasta que se rompe la cadena.
+     */
+    public int getCurrentStreak(String questId) {
+        int streak = 0;
+        LocalDate cursor = LocalDate.now();
+
+        // 1. Revisar HOY (si ya lo hizo hoy, la racha cuenta hoy)
+        // Nota: completedQuestIds() en history solo tiene lo de AYER hacia atrás.
+        // Hoy lo verificamos contra los flags o asumiendo que el Player.updateState aún no ha volcado hoy al historial.
+        // Para simplificar y ser robustos, miramos el historial:
+
+        // Empezamos mirando ayer, porque el historial se guarda al final del día.
+        // Si quisieramos incluir "hoy en tiempo real", necesitaríamos acceder al estado actual del Player,
+        // pero GateTracker suele mirar datos consolidados.
+
+        // Ajuste: Si miramos desde ayer hacia atrás.
+        cursor = cursor.minusDays(1);
+
+        while (history.containsKey(cursor)) {
+            DailyHistory day = history.get(cursor);
+            if (day.completedQuestIds() != null && day.completedQuestIds().contains(questId)) {
+                streak++;
+            } else {
+                break; // Racha rota
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return streak;
+    }
+
+    /**
+     * Calcula racha de DOS hábitos simultáneos (para Templo Sagrado).
+     */
+    public int getDualHabitStreak(DailyQuestType h1, DailyQuestType h2) {
+        if (h1 == null || h2 == null) return 0;
+        String id1 = h1.name();
+        String id2 = h2.name();
+
+        int streak = 0;
+        LocalDate cursor = LocalDate.now().minusDays(1);
+
+        while (history.containsKey(cursor)) {
+            DailyHistory day = history.get(cursor);
+            Set<String> completed = day.completedQuestIds();
+            if (completed != null && completed.contains(id1) && completed.contains(id2)) {
+                streak++;
+            } else {
+                break;
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return streak;
+    }
+
+    /**
+     * Calcula días consecutivos con HP bajo (Zombie Title).
+     */
+    public int getCurrentLowHPStreak(int maxThreshold) {
+        int streak = 0;
+        LocalDate cursor = LocalDate.now().minusDays(1);
+
+        while (history.containsKey(cursor)) {
+            DailyHistory day = history.get(cursor);
+            if (day.minHP() < maxThreshold) {
+                streak++;
+            } else {
+                break;
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return streak;
+    }
+
+    /**
+     * Calcula días consecutivos con HP alto (Inmortal Title).
+     */
+    public int getCurrentHighHPStreak(int minThreshold) {
+        int streak = 0;
+        LocalDate cursor = LocalDate.now().minusDays(1);
+
+        while (history.containsKey(cursor)) {
+            DailyHistory day = history.get(cursor);
+            // Asumimos que si no hubo burnout y el minHP fue alto, cuenta.
+            if (day.minHP() >= minThreshold && !day.hadBurnout()) {
+                streak++;
+            } else {
+                break;
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return streak;
+    }
+
+    public int getBurnoutsRecoveredCount() {
+        return (int) history.values().stream().filter(DailyHistory::hadBurnout).count();
+    }
+
+    public boolean isElderQuestCompleted(int elderNumber) {
+        String elderId = "ELDER_" + elderNumber;
+        // Buscamos si alguna vez se completó esta Elder Quest
+        return history.values().stream()
+                .anyMatch(day -> day.completedQuestIds() != null && day.completedQuestIds().contains(elderId));
+    }
+
+    // ========================================================================================
+    // RACHAS GENERALES (STREAKS)
     // ========================================================================================
 
     public int getDaysSinceLastQuestCompletion(String questId) {
@@ -233,9 +355,7 @@ public class GateTracker {
         return streak;
     }
 
-    public int getPerfectDayStreak() {
-        return currentPerfectDayStreak;
-    }
+    public int getPerfectDayStreak() { return currentPerfectDayStreak; }
 
     public void incrementPerfectDayStreak() {
         currentPerfectDayStreak++;
@@ -244,13 +364,8 @@ public class GateTracker {
         }
     }
 
-    public void resetPerfectDayStreak() {
-        currentPerfectDayStreak = 0;
-    }
-
-    public int getMaxPerfectDayStreak() {
-        return maxPerfectDayStreak;
-    }
+    public void resetPerfectDayStreak() { currentPerfectDayStreak = 0; }
+    public int getMaxPerfectDayStreak() { return maxPerfectDayStreak; }
 
     public int calculatePerfectDayStreakFromHistory() {
         LocalDate dateCursor = LocalDate.now().minusDays(1);
@@ -264,7 +379,7 @@ public class GateTracker {
     }
 
     // ========================================================================================
-    // GETTERS & SETTERS SIMPLES (FLAGS DIARIOS)
+    // GETTERS & SETTERS SIMPLES
     // ========================================================================================
 
     public boolean isPerfectDayAchievedToday() { return perfectDayAchievedToday; }
@@ -306,7 +421,6 @@ public class GateTracker {
         else consecutiveWeeksWithFullWeeklies = 0;
     }
 
-    // [NUEVO] Getters para The Vault
     public int getConsecutiveDaysAbove20k() { return consecutiveDaysAbove20k; }
     public LocalDate getLastLuxuryPurchaseDate() { return lastLuxuryPurchaseDate; }
 }
