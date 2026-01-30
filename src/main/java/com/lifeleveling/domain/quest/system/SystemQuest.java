@@ -1,11 +1,9 @@
 package com.lifeleveling.domain.quest.system;
 
 import com.lifeleveling.domain.player.Player;
-import com.lifeleveling.domain.player.PlayerRank;
 import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
-import java.util.Objects;
 
 /**
  * SystemQuest: Las Gates épicas de ascenso de rango.
@@ -19,7 +17,6 @@ public final class SystemQuest implements Quest {
     private final Instant completedAt;
 
     private SystemQuest(QuestId id, SystemQuestType type, QuestStatus status, Instant createdAt, Instant completedAt) {
-        // ... (Validaciones internas omitidas por brevedad, iguales a la versión anterior)
         this.id = id;
         this.type = type;
         this.status = status;
@@ -27,7 +24,10 @@ public final class SystemQuest implements Quest {
         this.completedAt = completedAt;
     }
 
-    // Factories
+    // ========================================================================================
+    // FACTORIES
+    // ========================================================================================
+
     public static SystemQuest create(SystemQuestType type) {
         return new SystemQuest(QuestId.generate(), type, QuestStatus.PENDING, Instant.now(), null);
     }
@@ -42,9 +42,6 @@ public final class SystemQuest implements Quest {
 
     /**
      * Completa la System Quest aplicando todos los efectos al jugador.
-     * 1. Otorga XP y Gold.
-     * 2. Asciende de Rango (Promotion).
-     * 3. Registra la Gate en el Tracker.
      */
     public SystemQuest complete(Player player, Instant completedAt) {
         if (player == null) throw new IllegalArgumentException("Player no puede ser null");
@@ -57,11 +54,10 @@ public final class SystemQuest implements Quest {
         player.addGeneralXP(type.getBaseXP());
         player.addGold(type.getBaseGold());
 
-        // 2. Ascenso de Rango (Si la gate desbloquea uno)
+        // 2. Ascenso de Rango
+        // [CORRECCIÓN] Como type.getRankUnlocked() ya devuelve PlayerRank, lo pasamos directo.
         if (type.getRankUnlocked() != null) {
-            PlayerRank newRank = PlayerRank.fromQuestRank(type.getRankUnlocked());
-            // El Player.promoteToRank gestiona internamente si es un ascenso válido (no degrada)
-            player.promoteToRank(newRank);
+            player.promoteToRank(type.getRankUnlocked());
         }
 
         // 3. Marcar en el historial del jugador
@@ -101,12 +97,27 @@ public final class SystemQuest implements Quest {
     @Override public QuestId id() { return id; }
     @Override public String name() { return type.getName(); }
     @Override public String description() { return type.getDescription(); }
-    @Override public QuestRank rank() { return type.getRankUnlocked(); }
+
+    /**
+     * [CORRECCIÓN] La interfaz Quest pide QuestRank, pero nosotros guardamos PlayerRank.
+     * Hacemos la conversión semántica aquí.
+     */
+    @Override
+    public QuestRank rank() {
+        if (type.getRankUnlocked() == null) return QuestRank.E; // Fallback por seguridad
+        try {
+            return QuestRank.valueOf(type.getRankUnlocked().name());
+        } catch (IllegalArgumentException e) {
+            return QuestRank.E; // Si no hay equivalencia directa
+        }
+    }
+
     @Override public QuestStatus status() { return status; }
     @Override public Instant createdAt() { return createdAt; }
     @Override public QuestReward reward() { return isCompleted() ? type.getBaseReward() : QuestReward.empty(); }
 
     public SystemQuestType getType() { return type; }
+
     public boolean isAvailableFor(int level, boolean prevGateDone) {
         return !isCompleted() && type.meetsLevelRequirement(level) && (!type.hasPreviousGate() || prevGateDone);
     }
