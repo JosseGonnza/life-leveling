@@ -126,19 +126,27 @@ public class Player {
     // ========================================================================================
 
     public void updateState(Instant now) {
-        // 1. Limpieza estándar diaria
+        // Si termina el día y no lograste el Perfect Day, la racha vuelve a 0.
+        if (!gateTracker.isPerfectDayAchievedToday()) {
+            if (gateTracker.getPerfectDayStreak() > 0) {
+                System.out.println("💔 Racha de Perfect Days rota. Vuelta a 0.");
+                gateTracker.resetPerfectDayStreak();
+            }
+        }
+
+        // 2. Limpieza estándar diaria (Aquí se borra el flag de perfectDayAchievedToday)
         gateTracker.resetDailyFlags();
         debuffTracker.cleanExpiredDebuffs(now);
         tempBuffTracker.cleanExpiredBuffs(now);
         manageBurnoutState(now);
 
-        // 2. Rotación Semanal
+        // 3. Rotación Semanal
         if (weeklyManager != null) {
             LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
             weeklyManager.performWeeklyReset(today);
         }
 
-        // 3. Comprobación de Triggers automáticos (Castigos)
+        // 4. Comprobación de Triggers automáticos (Castigos)
         int daysNoTidy = gateTracker.getDaysSinceLastQuestCompletion("TIDY");
         int workStreak = gateTracker.getConsecutiveWorkDays();
 
@@ -149,7 +157,7 @@ public class Player {
             System.out.println("⚠️ CASTIGO AUTOMÁTICO: " + db.getType().getDisplayName());
         }
 
-        // 4. Racha de pureza
+        // 5. Racha de pureza
         if (debuffTracker.getActiveDebuffs().isEmpty() && !isBurnoutActive()) {
             gateTracker.incrementDebuffFreeStreak();
         } else {
