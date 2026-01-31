@@ -1,13 +1,5 @@
 package com.lifeleveling.domain.player;
 
-/*
- * Mecánicas de Progresión:
- * - Cada stat tiene su propio nivel (1-100)
- * - Coste por nivel: Nivel_Actual × 10 XP
- * - XP Total para maxear un stat (Completar Nivel 100): 50,500 XP
- * - Al llegar a nivel 50: Se desbloquea Título de Maestría
- */
-
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -67,11 +59,12 @@ public enum StatType {
     private final String displayName;
     private final String description;
 
-    // Multiplicador base (Regla: Nivel * 10 XP)
-    private static final int XP_MULTIPLIER = 10;
+    // [CAMBIO CLAVE] Dificultad "Monarca" (30.0) en lugar de multiplicador simple (10)
+    // Esto hace que los niveles altos cuesten mucho más esfuerzo.
+    private static final double LEVELING_DIFFICULTY = 7.7;
 
-    // Total XP para completar el juego (Suma de 1 a 100 * 10)
-    public static final int MAX_TOTAL_XP = 50_500;
+    // Total XP para completar el juego (Nivel 100) con la nueva fórmula: 30 * 100^2
+    public static final int MAX_TOTAL_XP = 100_000;
 
     StatType(String icon, String displayName, String description) {
         this.icon = icon;
@@ -96,26 +89,28 @@ public enum StatType {
 
     /**
      * Calcula la XP necesaria para completar el nivel actual y pasar al siguiente.
-     * Coste = Nivel_Actual * 10.
+     * Fórmula Delta: XP_Total(Nivel+1) - XP_Total(Nivel)
      */
     public static int getXPRequiredForNextLevel(int currentLevel) {
         if (currentLevel < 1 || currentLevel >= 100) {
-            // Nota: En nivel 100 ya no hay "siguiente nivel", pero si queremos permitir
-            // llenar la barra una última vez para "Maxear", usamos 100 * 10 = 1000 XP.
-            if (currentLevel == 100) return 1000;
+            // En nivel 100 permitimos "llenar la barra" una última vez para efectos visuales (Bonus Mastery)
+            if (currentLevel == 100) return 5000;
 
             throw new IllegalArgumentException(
                     String.format("Nivel inválido: %d. Debe estar entre 1 y 100.", currentLevel)
             );
         }
-        return currentLevel * XP_MULTIPLIER;
+
+        // Calculamos cuánto cuesta saltar al siguiente escalón
+        int xpCurrent = getTotalXPForLevel(currentLevel);
+        int xpNext = getTotalXPForLevel(currentLevel + 1);
+
+        return xpNext - xpCurrent;
     }
 
     /**
      * Calcula la XP Total acumulada necesaria para ALCANZAR un nivel (empezando desde 0).
-     * Fórmula suma aritmética: (n * (n-1) / 2) * 10.
-     * * Ejemplo: Para alcanzar nivel 100, necesitas haber completado el 99.
-     * XP = (100 * 99 / 2) * 10 = 49,500 XP.
+     * Fórmula Cuadrática: DIFICULTAD * Nivel^2
      */
     public static int getTotalXPForLevel(int targetLevel) {
         if (targetLevel < 1 || targetLevel > 100) {
@@ -124,16 +119,11 @@ public enum StatType {
             );
         }
 
-        if (targetLevel == 1) {
-            return 0; // Nivel 1 es el inicial, 0 XP requerida
-        }
-        return (targetLevel * (targetLevel - 1) * XP_MULTIPLIER) / 2;
+        if (targetLevel == 1) return 0;
+
+        return (int) (LEVELING_DIFFICULTY * Math.pow(targetLevel, 2));
     }
 
-    /**
-     * Devuelve la XP Total necesaria para MAXEAR el stat (Completar nivel 100).
-     * Esto coincide con la Biblia: 50,500 XP.
-     */
     public static int getTotalXPToMaster() {
         return MAX_TOTAL_XP;
     }
