@@ -6,6 +6,8 @@ import com.lifeleveling.domain.career.CodeSession;
 import com.lifeleveling.domain.debuff.Debuff;
 import com.lifeleveling.domain.debuff.DebuffTracker;
 import com.lifeleveling.domain.debuff.DebuffType;
+import com.lifeleveling.domain.event.GameEvent;
+import com.lifeleveling.domain.event.GameEventPublisher;
 import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
 import com.lifeleveling.domain.item.ItemCategory;
@@ -60,6 +62,9 @@ public class Player {
 
     private BurnoutLock activeBurnoutLock;
 
+    // Sistema de eventos para notificaciones (reemplaza System.out.println)
+    private GameEventPublisher eventPublisher;
+
     private Player(UUID id, String name, int currentHP, PlayerRank currentRank, Stats stats, Wallet wallet,
                    long accumulatedGeneralXP, // [NUEVO] Argumento en constructor
                    Inventory inventory, TitleInventory titleInventory,
@@ -87,6 +92,25 @@ public class Player {
         this.milestoneTracker = milestoneTracker;
         this.weeklyManager = weeklyManager;
         this.activeBurnoutLock = activeBurnoutLock;
+        this.eventPublisher = GameEventPublisher.silent(); // Default: sin output
+    }
+
+    /**
+     * Configura el publisher de eventos para recibir notificaciones del juego.
+     * Útil para conectar CLI, JavaFX, o cualquier UI.
+     */
+    public void setEventPublisher(GameEventPublisher publisher) {
+        this.eventPublisher = publisher != null ? publisher : GameEventPublisher.silent();
+    }
+
+    public GameEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    private void emit(GameEvent event) {
+        if (eventPublisher != null) {
+            eventPublisher.publish(event);
+        }
     }
 
     // ========================================================================================
@@ -276,7 +300,7 @@ public class Player {
         if (finalAmount > 0) {
             // [CAMBIO CLAVE] Ya no repartimos entre stats. Sumamos al acumulado general.
             this.accumulatedGeneralXP += finalAmount;
-            System.out.println("⭐ Ganada XP General: +" + finalAmount + " (Total Acumulada: " + accumulatedGeneralXP + ")");
+            emit(GameEvent.xpGained("General", finalAmount, (int) accumulatedGeneralXP));
             checkLevelUp(oldLevel);
         }
     }
@@ -295,10 +319,10 @@ public class Player {
     private void checkLevelUp(int oldLevel) {
         int newLevel = getLevel();
         if (newLevel > oldLevel) {
-            System.out.println("🆙 ¡LEVEL UP! " + oldLevel + " -> " + newLevel);
+            emit(GameEvent.levelUp(oldLevel, newLevel));
             List<MilestoneType> awards = milestoneTracker.checkAndAward(this);
             if (!awards.isEmpty()) {
-                System.out.println("✨ Recompensas otorgadas: " + awards.size() + " hitos conseguidos.");
+                emit(GameEvent.info("✨ Recompensas otorgadas: " + awards.size() + " hitos conseguidos."));
             }
         }
     }
@@ -393,6 +417,7 @@ public class Player {
     public void spendGold(int amount) {
         if (!wallet.canAfford(amount)) throw new IllegalStateException("No tienes suficiente oro");
         this.wallet = wallet.subtract(amount);
+        gateTracker.recordGoldSpent(amount);
     }
 
     public void heal(int amount) {
@@ -421,13 +446,13 @@ public class Player {
 
         if (overflow > 0) {
             int goldPenalty = overflow * 10;
+            int actualPenalty = Math.min(goldPenalty, wallet.currentGold());
             System.out.println("💸 DAÑO MORAL CRÍTICO: El exceso de daño (" + overflow + " HP) se convierte en multa de -" + goldPenalty + " G");
-            try {
-                this.wallet = wallet.subtract(goldPenalty);
-            } catch (IllegalStateException | IllegalArgumentException e) {
-                System.out.println("💸 ¡BANCARROTA! No tienes suficiente oro para cubrir la multa moral. Saldo a 0.");
-                this.wallet = com.lifeleveling.domain.player.Wallet.empty();
+            if (actualPenalty < goldPenalty) {
+                System.out.println("💸 ¡BANCARROTA! No tienes suficiente oro. Saldo a 0.");
             }
+            this.wallet = wallet.subtract(goldPenalty); // Wallet.subtract() clamps to 0
+            gateTracker.recordGoldSpent(actualPenalty);
         }
     }
 
@@ -448,9 +473,11 @@ public class Player {
 
     private void triggerBurnout() {
         this.activeBurnoutLock = BurnoutLock.createNow();
+        int taxAmount = Wallet.calculateBurnoutTax(wallet.currentGold());
         this.wallet = wallet.applyBurnoutTax();
+        gateTracker.recordGoldSpent(taxAmount);
         gateTracker.recordBurnoutToday();
-        System.out.println("💔 ¡BURNOUT! HP a 0. Bloqueo de 24h y multa aplicada.");
+        emit(GameEvent.burnout());
     }
 
     public boolean isBurnoutActive() { return activeBurnoutLock != null && !activeBurnoutLock.hasExpired(Instant.now()); }
@@ -458,13 +485,14 @@ public class Player {
     private void manageBurnoutState(Instant now) {
         if (activeBurnoutLock == null || !activeBurnoutLock.hasExpired(now)) return;
         if (currentHP > 0) {
-            System.out.println("🔥 Burnout superado. ¡Bienvenido de vuelta!");
+            emit(GameEvent.burnoutRecovered());
             this.activeBurnoutLock = null;
         } else {
             int tax = (int) (wallet.currentGold() * 0.05);
             if (tax > 0) {
                 this.wallet = wallet.subtract(tax);
-                System.out.println("🏥 Hospitalización extendida. -" + tax + " G");
+                gateTracker.recordGoldSpent(tax);
+                emit(GameEvent.goldSpent(tax, "Hospitalización extendida"));
             }
             this.activeBurnoutLock = BurnoutLock.trigger(now);
         }
@@ -472,7 +500,7 @@ public class Player {
 
     public void triggerPerfectDay() {
         if (gateTracker.isPerfectDayAchievedToday()) return;
-        System.out.println("🌟 ¡PERFECT DAY! +100 XP, +100 G, HP MAX 🌟");
+        emit(GameEvent.perfectDay());
         this.heal(100);
         this.addGold(100);
         this.addGeneralXP(100);
