@@ -6,6 +6,7 @@ import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 public final class UserQuest implements Quest {
@@ -23,13 +24,20 @@ public final class UserQuest implements Quest {
     private UserQuest(QuestId id, String name, String description, QuestRank rank, LocalDate deadline,
                       QuestStatus status, Instant createdAt, Instant completedAt, Instant failedAt,
                       boolean skipDateValidation) {
-        // Validaciones internas (igual que antes)
         if (id == null) throw new IllegalArgumentException("ID null");
         if (name == null || name.isBlank()) throw new IllegalArgumentException("Nombre vacío");
+        if (description == null || description.isBlank()) throw new IllegalArgumentException("Descripción vacía");
         if (rank == null) throw new IllegalArgumentException("Rango null");
         if (status == null) throw new IllegalArgumentException("Estado null");
         if (!skipDateValidation && deadline != null && deadline.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Deadline en el pasado");
+        }
+        // Validar coherencia de estado
+        if (status == QuestStatus.COMPLETED && completedAt == null) {
+            throw new IllegalArgumentException("Quest COMPLETED debe tener completedAt");
+        }
+        if ((status == QuestStatus.FAILED || status == QuestStatus.EXPIRED) && failedAt == null && !skipDateValidation) {
+            throw new IllegalArgumentException("Quest FAILED/EXPIRED debe tener failedAt");
         }
 
         this.id = id;
@@ -43,71 +51,70 @@ public final class UserQuest implements Quest {
         this.failedAt = failedAt;
     }
 
-    // Factories (create, reconstitute...) se mantienen igual que tu versión anterior
+    // ========================================================================================
+    // FACTORY METHODS
+    // ========================================================================================
+
     public static UserQuest create(String name, String description, QuestRank rank, LocalDate deadline) {
-        return new UserQuest(QuestId.generate(), name, description, rank, deadline, QuestStatus.PENDING, Instant.now(), null, null, false);
+        return new UserQuest(QuestId.generate(), name, description, rank, deadline,
+                QuestStatus.PENDING, Instant.now(), null, null, false);
     }
 
-    public static UserQuest reconstitute(QuestId id, String name, String description, QuestRank rank, LocalDate deadline, QuestStatus status, Instant created, Instant completed, Instant failed) {
+    public static UserQuest createWithoutDeadline(String name, String description, QuestRank rank) {
+        return new UserQuest(QuestId.generate(), name, description, rank, null,
+                QuestStatus.PENDING, Instant.now(), null, null, false);
+    }
+
+    public static UserQuest reconstitute(QuestId id, String name, String description, QuestRank rank,
+                                          LocalDate deadline, QuestStatus status, Instant created,
+                                          Instant completed, Instant failed) {
         return new UserQuest(id, name, description, rank, deadline, status, created, completed, failed, true);
     }
 
     // ========================================================================================
-    // LÓGICA DE FALLO Y PENALIZACIONES [FASE 2.3]
+    // LÓGICA DE FALLO Y PENALIZACIONES
     // ========================================================================================
 
     /**
      * Falla la misión y aplica el castigo al jugador.
-     * Convierte el daño letal (si HP < 0) en deuda de oro.
-     * * @param player Jugador que sufre la penalización.
+     * Delega la lógica de penalización a Player.applyUserQuestFailure().
+     *
+     * @param player   Jugador que sufre la penalización.
      * @param failedAt Momento del fallo.
      * @return Nueva instancia de la quest en estado FAILED.
      */
     public UserQuest fail(Player player, Instant failedAt) {
         if (player == null) throw new IllegalArgumentException("Player no puede ser null");
+        if (failedAt == null) throw new IllegalArgumentException("FailedAt null");
 
-        // 1. Obtener daño base del rango (Ej: Rango S = 50 HP)
-        int moralDamage = rank.getMoralDamage();
-        int currentHP = player.getCurrentHP();
+        // Delegar al Player la aplicación de penalizaciones
+        // Player.applyUserQuestFailure() maneja correctamente el clamping de oro
+        player.applyUserQuestFailure(this);
 
-        // 2. Calcular si el daño es letal (bajaría de 0 HP)
-        if (currentHP - moralDamage < 0) {
-            // Caso: Vida o Bolsa
-            int excessDamage = Math.abs(currentHP - moralDamage);
-            int goldPenalty = excessDamage * 10; // Ratio: 1 HP = 10 G [Biblia Cap 2.3]
-
-            // a) Quitar toda la vida restante (Burnout trigger)
-            if (currentHP > 0) {
-                player.takeDamage(currentHP);
-            }
-
-            // b) Cobrar la diferencia en oro
-            try {
-                player.spendGold(goldPenalty);
-                System.out.println("💀 PENALIZACIÓN CRÍTICA: -" + currentHP + " HP y -" + goldPenalty + " G (Deuda de Sangre).");
-            } catch (IllegalStateException e) {
-                // Si no tiene oro suficiente, spendGold lanza excepción.
-                // Aquí podríamos dejarle la wallet a 0 o propagar el error.
-                // Por ahora dejamos que propague para que la UI maneje el aviso "Sin fondos".
-                throw e;
-            }
-        } else {
-            // Caso: Daño normal
-            player.takeDamage(moralDamage);
-            System.out.println("💔 Misión Fallada: -" + moralDamage + " HP (Daño Moral).");
-        }
-
-        // 3. Retornar quest fallida (Estado inmutable)
         return fail(failedAt);
     }
 
-    // Sobrecarga simple para transición de estado (sin jugador)
     @Override
     public UserQuest fail(Instant failedAt) {
         if (failedAt == null) throw new IllegalArgumentException("FailedAt null");
-        if (!status.canTransitionTo(QuestStatus.FAILED)) throw new IllegalStateException("Estado inválido para fallar: " + status);
+        if (!status.canTransitionTo(QuestStatus.FAILED)) {
+            throw new IllegalStateException("Estado inválido para fallar: " + status);
+        }
+        return new UserQuest(id, name, description, rank, deadline, QuestStatus.FAILED,
+                createdAt, null, failedAt, true);
+    }
 
-        return new UserQuest(id, name, description, rank, deadline, QuestStatus.FAILED, createdAt, null, failedAt, true);
+    /**
+     * Marca la quest como expirada (solo si tiene deadline).
+     */
+    public UserQuest expire(Instant expiredAt) {
+        if (expiredAt == null) throw new IllegalArgumentException("ExpiredAt null");
+        if (!hasDeadline()) throw new IllegalStateException("No se puede expirar una quest sin deadline");
+        if (!status.canTransitionTo(QuestStatus.EXPIRED)) {
+            throw new IllegalStateException("Estado inválido para expirar: " + status);
+        }
+        return new UserQuest(id, name, description, rank, deadline, QuestStatus.EXPIRED,
+                createdAt, null, expiredAt, true);
     }
 
     // ========================================================================================
@@ -129,6 +136,7 @@ public final class UserQuest implements Quest {
 
     @Override
     public UserQuest complete(Instant completedAt) {
+        if (completedAt == null) throw new IllegalArgumentException("CompletedAt null");
         if (!status.canTransitionTo(QuestStatus.COMPLETED)) throw new IllegalStateException("No se puede completar");
         return new UserQuest(id, name, description, rank, deadline, QuestStatus.COMPLETED, createdAt, completedAt, null, true);
     }
@@ -146,6 +154,9 @@ public final class UserQuest implements Quest {
     @Override public Instant createdAt() { return createdAt; }
     @Override public QuestReward reward() { return QuestReward.fromRank(rank); }
 
+    public Instant getCompletedAt() { return completedAt; }
+    public Instant getFailedAt() { return failedAt; }
+
     public boolean hasDeadline() { return deadline != null; }
     public LocalDate getDeadline() { return deadline; }
 
@@ -153,8 +164,95 @@ public final class UserQuest implements Quest {
         return hasDeadline() && currentDate.isAfter(deadline);
     }
 
+    // ========================================================================================
+    // CÁLCULOS DE PENALIZACIÓN
+    // ========================================================================================
+
+    /**
+     * Calcula el daño moral (HP) que causa fallar esta quest.
+     */
+    public int calculateMoralDamage() {
+        return rank.getMoralDamage();
+    }
+
+    /**
+     * Calcula la penalización en oro si el daño HP causa burnout.
+     * Ratio: 1 HP = 10 G (según La Biblia Cap 2.3)
+     */
+    public int calculateGoldDamageOnBurnout() {
+        return rank.getMoralDamage() * 10;
+    }
+
+    /**
+     * Calcula los días restantes hasta la deadline.
+     * @return días restantes, o null si no tiene deadline
+     */
+    public Integer getDaysRemaining(LocalDate fromDate) {
+        if (fromDate == null) throw new IllegalArgumentException("fromDate no puede ser null");
+        if (!hasDeadline()) return null;
+        return (int) ChronoUnit.DAYS.between(fromDate, deadline);
+    }
+
+    // ========================================================================================
+    // DISPLAY
+    // ========================================================================================
+
     public String toDisplayString() {
-        return String.format("%s [%s] %s | %s",
-                rank.getIcon(), rank.name(), name, status.toDisplayString());
+        StringBuilder sb = new StringBuilder();
+        sb.append(rank.getIcon()).append(" [").append(rank.name()).append("] ").append(name);
+
+        // Deadline info
+        sb.append(" | ⏰ ");
+        if (!hasDeadline()) {
+            sb.append("Sin límite");
+        } else {
+            LocalDate today = LocalDate.now();
+            if (status == QuestStatus.EXPIRED) {
+                long daysAgo = ChronoUnit.DAYS.between(deadline, today);
+                sb.append("EXPIRADA hace ").append(daysAgo).append(" días");
+            } else if (today.equals(deadline)) {
+                sb.append("¡HOY!");
+            } else {
+                int daysRemaining = (int) ChronoUnit.DAYS.between(today, deadline);
+                if (daysRemaining < 0) {
+                    sb.append("Expirada (").append(Math.abs(daysRemaining)).append(" días)");
+                } else {
+                    sb.append(daysRemaining).append(" días");
+                }
+            }
+        }
+
+        // Status
+        sb.append(" | 📋 ").append(status.toDisplayString());
+
+        return sb.toString();
+    }
+
+    // ========================================================================================
+    // EQUALS, HASHCODE, TOSTRING
+    // ========================================================================================
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        UserQuest userQuest = (UserQuest) o;
+        return Objects.equals(id, userQuest.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "UserQuest{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", rank=" + rank +
+                ", status=" + status +
+                ", deadline=" + deadline +
+                '}';
     }
 }
