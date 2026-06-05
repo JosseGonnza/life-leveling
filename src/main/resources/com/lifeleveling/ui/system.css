@@ -1,0 +1,109 @@
+/* SYSTEM UI v1.0 — Cyber-Gothic (Solo Leveling). Paleta en DISEÑO_UI.md §1.A */
+
+.app-root {
+    -fx-background-color: linear-gradient(to bottom right, #050A14, #08111F 60%, #0A1626);
+    -fx-border-color: #00FFFF;
+    -fx-border-width: 1;
+}
+
+/* ---- Barra de título propia ---- */
+.title-bar {
+    -fx-background-color: #060D1A;
+    -fx-padding: 8 12 8 14;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent transparent #11324A transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.sys-title {
+    -fx-text-fill: #00FFFF;
+    -fx-font-family: "monospace";
+    -fx-font-size: 13;
+    -fx-letter-spacing: 2;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.5), 8, 0.3, 0, 0);
+}
+.close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6F8BA3;
+    -fx-font-size: 13;
+    -fx-cursor: hand;
+    -fx-padding: 2 8 2 8;
+}
+.close-btn:hover { -fx-text-fill: #FF0033; }
+
+/* ---- Layout general ---- */
+.home { -fx-padding: 18; -fx-spacing: 14; }
+.columns { -fx-padding: 4 0 4 0; }
+
+.panel {
+    -fx-background-color: rgba(8, 18, 32, 0.55);
+    -fx-border-color: #123247;
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-padding: 16;
+}
+
+/* ---- Tipografía ---- */
+.player-name { -fx-text-fill: white; -fx-font-size: 20; -fx-font-weight: bold; }
+.rank-badge  { -fx-text-fill: #00FFFF; -fx-font-family: "monospace"; -fx-font-size: 12; -fx-letter-spacing: 1; }
+.section-title, .caption {
+    -fx-text-fill: #6F8BA3; -fx-font-family: "monospace"; -fx-font-size: 11; -fx-letter-spacing: 2;
+}
+.muted { -fx-text-fill: #9FB3C8; -fx-font-family: "monospace"; -fx-font-size: 12; }
+
+.big-level {
+    -fx-text-fill: white; -fx-font-size: 52; -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.6), 14, 0.4, 0, 0);
+}
+
+/* ---- Barras (HP / XP) ---- */
+.bar-track {
+    -fx-background-color: #0C1A2A;
+    -fx-border-color: #16364C; -fx-border-width: 1;
+    -fx-background-radius: 2; -fx-border-radius: 2;
+}
+.bar-xp  { -fx-background-color: linear-gradient(to right, #0088AA, #00FFFF); -fx-background-radius: 2; }
+.bar-hp  { -fx-background-color: linear-gradient(to right, #0aa0c0, #4be0ff); -fx-background-radius: 2; }
+.bar-hp-critical {
+    -fx-background-color: linear-gradient(to right, #AA0022, #FF0033); -fx-background-radius: 2;
+    -fx-effect: dropshadow(gaussian, rgba(255,0,51,0.6), 8, 0.4, 0, 0);
+}
+
+/* ---- Debuff slots ---- */
+.debuff-slot {
+    -fx-min-width: 24; -fx-min-height: 24; -fx-max-width: 24; -fx-max-height: 24;
+    -fx-background-color: #0A1726; -fx-border-color: #16364C; -fx-border-width: 1; -fx-border-radius: 2;
+}
+
+/* ---- Hábitos ---- */
+.habit-row {
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: rgba(10,23,38,0.6);
+    -fx-border-color: #11293B; -fx-border-width: 1; -fx-border-radius: 2;
+}
+.habit-done    { -fx-text-fill: white; -fx-font-size: 13; }
+.habit-pending { -fx-text-fill: #5C7488; -fx-font-size: 13; }
+.check-done    { -fx-text-fill: #00FFFF; -fx-font-size: 14; -fx-font-weight: bold; }
+.check-pending { -fx-text-fill: #3A4F63; -fx-font-size: 14; }
+
+/* ---- Barra inferior ---- */
+.bottom-bar {
+    -fx-padding: 12 6 4 6;
+    -fx-border-color: #11324A transparent transparent transparent; -fx-border-width: 1 0 0 0;
+}
+.nav-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9FB3C8; -fx-font-family: "monospace"; -fx-font-size: 12;
+    -fx-border-color: #1B3950; -fx-border-width: 1; -fx-border-radius: 2;
+    -fx-padding: 6 14 6 14; -fx-cursor: hand;
+}
+.nav-btn:hover { -fx-text-fill: #00FFFF; -fx-border-color: #00FFFF; }
+.continue-btn {
+    -fx-background-color: rgba(0,255,255,0.08);
+    -fx-text-fill: #00FFFF; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-font-weight: bold;
+    -fx-border-color: #00FFFF; -fx-border-width: 1; -fx-border-radius: 2;
+    -fx-padding: 8 26 8 26; -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.4), 10, 0.3, 0, 0);
+}
+.continue-btn:hover { -fx-background-color: rgba(0,255,255,0.18); }
+.gold { -fx-text-fill: #FFD700; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-padding: 0 4 0 10; }
