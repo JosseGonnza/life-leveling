@@ -161,6 +161,11 @@ public class GateTracker {
         return count;
     }
 
+    /** ¿Se ha completado hoy este hábito diario? (para el checklist de la Home). */
+    public boolean isHabitCompletedToday(DailyQuestType habit) {
+        return todayCompletedQuestIds.contains(habit.name());
+    }
+
     public void recordHPSnapshot(int hp) {
         if (hp < this.todayMinHP) this.todayMinHP = hp;
     }

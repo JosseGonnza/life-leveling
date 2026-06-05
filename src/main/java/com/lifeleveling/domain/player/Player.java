@@ -333,6 +333,11 @@ public class Player {
         return Math.max(1, Math.min(level, 100 ));
     }
 
+    /** XP total acumulada (stats + general); misma base que getLevel. Para la barra de XP del HUD. */
+    public long getTotalXP() {
+        return stats.getTotalAccumulatedXP() + this.accumulatedGeneralXP;
+    }
+
     private void checkLevelUp(int oldLevel) {
         int newLevel = getLevel();
         if (newLevel > oldLevel) {

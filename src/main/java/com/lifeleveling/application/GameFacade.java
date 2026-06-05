@@ -1,5 +1,6 @@
 package com.lifeleveling.application;
 
+import com.lifeleveling.application.dto.DailyChecklistView;
 import com.lifeleveling.application.dto.PlayerView;
 import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.application.port.Notifier;
@@ -175,6 +176,10 @@ public final class GameFacade {
 
     public PlayerView state() {
         return PlayerView.from(game());
+    }
+
+    public DailyChecklistView dailyChecklist() {
+        return DailyChecklistView.from(game());
     }
 
     // ----- Internos -----
