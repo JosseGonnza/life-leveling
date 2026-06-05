@@ -134,22 +134,22 @@ class UserQuestTest {
 
     @Nested
     class Rewards {
-        @ParameterizedTest(name = "Rango {0}: XP={1}, Gold={2}")
+        @ParameterizedTest(name = "Rango {0}: XP={1} (sin oro)")
         @CsvSource({
-                "E,    10,    15",
-                "D,    50,    50",
-                "C,    150,   150",
-                "B,    500,   400",
-                "A,    1500,  2000",
-                "S,    5000,  10000"
+                "E,    10",
+                "D,    50",
+                "C,    150",
+                "B,    500",
+                "A,    1500",
+                "S,    5000"
         })
-        @DisplayName("reward() retorna valores del rango asignado")
-        void whenGettingReward_thenMatchesRank(QuestRank rank, int expectedXP, int expectedGold) {
+        @DisplayName("reward() da la XP del rango y CERO oro (C1: User Quests solo dan XP)")
+        void whenGettingReward_thenMatchesRank(QuestRank rank, int expectedXP) {
             UserQuest quest = UserQuest.createWithoutDeadline("Test", "Test", rank);
             QuestReward reward = quest.reward();
 
             assertEquals(expectedXP, reward.generalXP());
-            assertEquals(expectedGold, reward.gold());
+            assertEquals(0, reward.gold());
         }
 
         @Test

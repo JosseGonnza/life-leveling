@@ -152,7 +152,7 @@ public final class UserQuest implements Quest {
     @Override public QuestRank rank() { return rank; }
     @Override public QuestStatus status() { return status; }
     @Override public Instant createdAt() { return createdAt; }
-    @Override public QuestReward reward() { return QuestReward.fromRank(rank); }
+    @Override public QuestReward reward() { return QuestReward.ofGeneralXP(rank.getBaseXP()); } // C1: las User Quests solo dan XP, no oro
 
     public Instant getCompletedAt() { return completedAt; }
     public Instant getFailedAt() { return failedAt; }

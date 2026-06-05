@@ -12,7 +12,7 @@ public record DebuffEffect(
         EffectType type,
         double value,          // Ej: 0.5 para multiplicador, 150 para oro
         StatType targetStat,   // Opcional: Solo si afecta a un stat específico
-        String targetItemId    // Opcional: Solo si bloquea un item específico (ej: "monster_energy")
+        String targetItemId    // Opcional: Solo si bloquea un item específico (ej: "consumable_monster")
 ) {
 
     public enum EffectType {

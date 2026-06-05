@@ -45,7 +45,7 @@ public enum DebuffType {
             "Demasiada cafeína. Tu corazón va a mil.",
             List.of(
                     DebuffEffect.statPenalty(StatType.DISCIPLINE, 0.20),
-                    DebuffEffect.disableItem("monster_energy")
+                    DebuffEffect.disableItem("consumable_monster")
             ),
             null,
             "#DC143C", // Crimson

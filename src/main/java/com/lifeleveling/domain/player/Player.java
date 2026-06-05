@@ -510,7 +510,7 @@ public class Player {
             emit(GameEvent.burnoutRecovered());
             this.activeBurnoutLock = null;
         } else {
-            int tax = (int) (wallet.currentGold() * 0.05);
+            int tax = (int) (wallet.currentGold() * 0.10); // Bucle de Hospital: 10% diario (Biblia 1.5 Fase 4.1)
             if (tax > 0) {
                 this.wallet = wallet.subtract(tax);
                 gateTracker.recordGoldSpent(tax);
