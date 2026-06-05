@@ -285,7 +285,7 @@ public class Player {
 
         int oldLevel = getLevel();
 
-        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        double hpMultiplier = hpState.getXpMultiplier();
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double debuffStatMult = debuffTracker.getStatXPMultiplier(type);
         double titleMultiplier = titleInventory.getStatXPMultiplier(type);
@@ -304,7 +304,7 @@ public class Player {
         if (amount <= 0) return;
         int oldLevel = getLevel();
 
-        double hpMultiplier = (hpState == HPState.TIRED) ? 0.5 : 1.0;
+        double hpMultiplier = hpState.getXpMultiplier();
         double debuffGlobalMult = debuffTracker.getGlobalXPMultiplier();
         double titleMultiplier = titleInventory.getGeneralXPMultiplier();
 

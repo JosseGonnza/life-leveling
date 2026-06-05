@@ -98,6 +98,16 @@ public record Item(
         );
     }
 
+    // [NUEVO] Consumible que cura HP Y otorga un buff temporal (ej: Barrita +2HP +5% STR; Cine +10HP +10% CHA)
+    public static Item createConsumableWithBuff(String id, String name, int price, ItemCategory cat, int hpRec, TemporaryBuffSpec buffSpec) {
+        return new Item(
+                id, name, "", price, ItemTier.CONSUMABLE, ItemSlot.NONE, cat, Map.of(),
+                hpRec, 0, true, false,
+                Optional.empty(), Optional.empty(),
+                Optional.of(buffSpec)
+        );
+    }
+
     // Tesoros
     public static Item createTreasure(String id, String name, int price, String description) {
         return new Item(

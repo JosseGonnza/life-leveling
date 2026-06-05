@@ -212,9 +212,9 @@ public class ItemCatalog {
             "consumable_espresso", "Espresso Shot", 80, ItemCategory.DRINK_SOCIAL, 5, 0
     ));
 
-    // [ACTUALIZADO] Barrita ahora es un PowerUp (+5% STR 1h)
-    public static final Item PROTEIN_BAR = register(Item.createPowerUp(
-            "consumable_bar", "Barrita de Proteína", 150,
+    // Biblia 3.3: +2 HP + 5% STR XP (1h)
+    public static final Item PROTEIN_BAR = register(Item.createConsumableWithBuff(
+            "consumable_bar", "Barrita de Proteína", 150, ItemCategory.SUPPLEMENT, 2,
             TemporaryBuffSpec.of(StatType.STRENGTH, 0.05, Duration.ofHours(1))
     ));
 
@@ -281,8 +281,10 @@ public class ItemCatalog {
             "luxury_game", "Juego Nuevo (Steam)", 4000, 0, DebuffType.BOREDOM
     )); // Cura Aburrimiento
 
-    public static final Item CINEMA = register(Item.createConsumable(
-            "luxury_cinema", "Cine + Palomitas", 1500, ItemCategory.ENTERTAINMENT, 10, 0
+    // Biblia 3.3: +10 HP + 10% CHA XP (duración no especificada en la Biblia → 2h, plan de tarde)
+    public static final Item CINEMA = register(Item.createConsumableWithBuff(
+            "luxury_cinema", "Cine + Palomitas", 1500, ItemCategory.ENTERTAINMENT, 10,
+            TemporaryBuffSpec.of(StatType.CHARISMA, 0.10, Duration.ofHours(2))
     ));
 
     public static final Item WEEKEND_TRIP = register(Item.createConsumable(
