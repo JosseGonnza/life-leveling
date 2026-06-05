@@ -5,6 +5,7 @@ import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.application.port.Notifier;
 import com.lifeleveling.application.port.PlayerRepository;
 import com.lifeleveling.application.service.CareerService;
+import com.lifeleveling.application.service.DailyHabitService;
 import com.lifeleveling.application.service.DayService;
 import com.lifeleveling.application.service.GateChallengeService;
 import com.lifeleveling.application.service.QuestService;
@@ -25,6 +26,7 @@ public final class GameFacade {
     private final Notifier notifier;
 
     private final CareerService career = new CareerService();
+    private final DailyHabitService habits = new DailyHabitService();
     private final ShopService shop = new ShopService();
     private final QuestService quests;
     private final GateChallengeService gates = new GateChallengeService();
@@ -66,6 +68,36 @@ public final class GameFacade {
 
     public PlayerView workJob(int hours) {
         career.job(game(), hours);
+        return persistAndView();
+    }
+
+    public PlayerView sleep(int hours) {
+        habits.sleep(game(), hours);
+        return persistAndView();
+    }
+
+    public PlayerView read(int pages) {
+        habits.read(game(), pages);
+        return persistAndView();
+    }
+
+    public PlayerView diet(boolean completed) {
+        habits.diet(game(), completed);
+        return persistAndView();
+    }
+
+    public PlayerView gym(boolean completed) {
+        habits.gym(game(), completed);
+        return persistAndView();
+    }
+
+    public PlayerView skincare(boolean completed) {
+        habits.skincare(game(), completed);
+        return persistAndView();
+    }
+
+    public PlayerView tidy(boolean completed) {
+        habits.tidy(game(), completed);
         return persistAndView();
     }
 

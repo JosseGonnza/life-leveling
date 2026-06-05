@@ -33,6 +33,7 @@ public class Player {
 
     private static final double JOB_BASE_RATE = 31.25; // G/hora base del JOB (Biblia 3.1)
     private static final int JOB_MAX_HOURS = 16;        // Jornada máxima registrable (Biblia 1.1)
+    private static final String AIR_FRYER_ID = "gear_airfryer"; // DIET da +5 HP extra (Biblia 2.1.2)
 
     private final UUID id;
     private final String name;
@@ -225,6 +226,9 @@ public class Player {
         if (item.hpRecovery() > 0) heal(item.hpRecovery());
         if (item.hpDamage() > 0) takeDamage(item.hpDamage());
 
+        // Logic-Lock de DIET (Biblia 2.1.2): comer basura bloquea el check de Dieta hoy.
+        if (item.category() == ItemCategory.FOOD_JUNK) gateTracker.recordJunkFoodConsumed();
+
         debuffTracker.checkItemConsumptionTrigger(item.id(), now).ifPresent(this::applyDebuffDirect);
 
         applyItemSideEffects(item);
@@ -356,7 +360,9 @@ public class Player {
         takeWorkDamage(reward.hpCost(), hours);
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
         gateTracker.recordCareerHoursToday(hours);
+        if (hours > 0) gateTracker.recordDailyQuestCompleted(DailyQuestType.CODE.name());
         notifyQuestCompleted("CODE", hours);
+        evaluatePerfectDay();
 
         return session;
     }
@@ -386,8 +392,11 @@ public class Player {
         if (pages <= 0) return;
         applyQuestReward(DailyQuestType.READ.calculateReward(pages));
         gateTracker.recordPagesRead(pages);
-        gateTracker.recordDailyQuestCompleted("READ");
+        if (DailyQuestType.READ.meetsCondition(pages)) {
+            gateTracker.recordDailyQuestCompleted(DailyQuestType.READ.name());
+        }
         notifyQuestCompleted("READ", pages);
+        evaluatePerfectDay();
     }
 
     /**
@@ -410,11 +419,59 @@ public class Player {
 
         addGeneralXP(finalXP);
         heal(DailyQuestType.SLEEP.calculateDynamicHP(hours));
+        if (DailyQuestType.SLEEP.meetsCondition(hours)) {
+            gateTracker.recordDailyQuestCompleted(DailyQuestType.SLEEP.name());
+        }
         notifyQuestCompleted("SLEEP", hours);
+        evaluatePerfectDay();
 
         if (itemMultiplier > 1.0) {
             System.out.println("🛏️ ¡Descanso Premium! XP x" + itemMultiplier);
         }
+    }
+
+    /**
+     * Completa un hábito diario booleano: DIET, GYM, SKINCARE o TIDY (Biblia cap 2.1.2).
+     * SLEEP/CODE/READ tienen su propia entrada (registerSleep/Code/ReadSession).
+     * Reglas: DIET +50 XP y +5 HP (+10 con Air Fryer), con Logic-Lock si hoy hubo comida basura;
+     * GYM +50 STR y -5 HP (mitigable con Pegasus); SKINCARE +50 CHA y +10 HP; TIDY +50 DIS y cura Caos.
+     * B1: si este check cierra el Perfect Day (7/7), prevalece (HP a 100, sin Burnout) y se ignora el coste de HP.
+     */
+    public void completeHabit(DailyQuestType type, boolean completed) {
+        if (type == null) throw new IllegalArgumentException("Hábito nulo");
+        if (!type.requiresBooleanInput()) {
+            throw new IllegalStateException(type + " no es un hábito booleano; usa su registro específico");
+        }
+        if (!completed) return;
+
+        if (type == DailyQuestType.DIET && gateTracker.wasJunkConsumedToday()) {
+            emit(GameEvent.warning("No puedes marcar Dieta hoy. Tu cuerpo recuerda esa hamburguesa."));
+            return;
+        }
+
+        applyQuestReward(type.calculateReward(true));
+        gateTracker.recordDailyQuestCompleted(type.name());
+        notifyQuestCompleted(type.name(), 1);
+        emit(GameEvent.questCompleted(type.getName()));
+
+        if (evaluatePerfectDay()) return; // B1: Perfect Day cura a 100 y anula el coste de HP
+
+        switch (type) {
+            case DIET -> heal(inventory.hasItem(AIR_FRYER_ID) ? 10 : 5);
+            case SKINCARE -> heal(type.getHpEffect());
+            case GYM -> takeGymDamage();
+            default -> { } // TIDY: sin efecto de HP
+        }
+    }
+
+    /** Dispara el Perfect Day si ya hay 7/7 hábitos hoy. Devuelve true si quedó (o ya estaba) logrado. */
+    private boolean evaluatePerfectDay() {
+        if (gateTracker.isPerfectDayAchievedToday()) return true;
+        if (gateTracker.getDailyHabitsCompletedTodayCount() >= 7) {
+            triggerPerfectDay();
+            return true;
+        }
+        return false;
     }
 
     // ========================================================================================

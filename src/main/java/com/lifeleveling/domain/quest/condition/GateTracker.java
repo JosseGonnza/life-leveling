@@ -55,6 +55,7 @@ public class GateTracker {
     private double todayCareerHours = 0.0;
     private int todayMinHP = 100;
     private boolean todayHadDebuffsActive = false;
+    private boolean todayJunkConsumed = false;
     private final List<String> todayConsumablesBought = new ArrayList<>();
     private final Set<String> todayCompletedQuestIds = new HashSet<>();
     private final Map<QuestRank, Integer> todayCompletedQuestsCount = new HashMap<>();
@@ -142,6 +143,24 @@ public class GateTracker {
         if (questId != null) this.todayCompletedQuestIds.add(questId);
     }
 
+    /** Marca que hoy se ha consumido Comida Basura (Logic-Lock de DIET, Biblia 2.1.2). */
+    public void recordJunkFoodConsumed() {
+        this.todayJunkConsumed = true;
+    }
+
+    public boolean wasJunkConsumedToday() {
+        return todayJunkConsumed;
+    }
+
+    /** Cuántos de los 7 hábitos diarios se han completado hoy (fuente del Perfect Day 7/7). */
+    public int getDailyHabitsCompletedTodayCount() {
+        int count = 0;
+        for (DailyQuestType habit : DailyQuestType.values()) {
+            if (todayCompletedQuestIds.contains(habit.name())) count++;
+        }
+        return count;
+    }
+
     public void recordHPSnapshot(int hp) {
         if (hp < this.todayMinHP) this.todayMinHP = hp;
     }
@@ -177,6 +196,7 @@ public class GateTracker {
         this.todayCareerHours = 0.0;
         this.todayMinHP = 100;
         this.todayHadDebuffsActive = false;
+        this.todayJunkConsumed = false;
         this.todayConsumablesBought.clear();
         this.todayCompletedQuestIds.clear();
         this.todayCompletedQuestsCount.clear();
