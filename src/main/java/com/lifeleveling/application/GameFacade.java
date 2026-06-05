@@ -13,6 +13,7 @@ import com.lifeleveling.application.service.ShopService;
 import com.lifeleveling.domain.player.Player;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.system.GateVerificationResult;
+import com.lifeleveling.domain.quest.system.SystemQuestType;
 import com.lifeleveling.domain.quest.user.UserQuest;
 
 /**
@@ -136,6 +137,26 @@ public final class GameFacade {
 
     public GateVerificationResult challengeGate() {
         GateVerificationResult result = gates.challenge(game());
+        persist();
+        return result;
+    }
+
+    public GateVerificationResult vaultStatus() {
+        return gates.statusOf(game(), SystemQuestType.GATE_VAULT);
+    }
+
+    public GateVerificationResult challengeVault() {
+        GateVerificationResult result = gates.challengeOf(game(), SystemQuestType.GATE_VAULT);
+        persist();
+        return result;
+    }
+
+    public GateVerificationResult redemptionStatus() {
+        return gates.statusOf(game(), SystemQuestType.GATE_REDEMPTION);
+    }
+
+    public GateVerificationResult challengeRedemption() {
+        GateVerificationResult result = gates.challengeOf(game(), SystemQuestType.GATE_REDEMPTION);
         persist();
         return result;
     }

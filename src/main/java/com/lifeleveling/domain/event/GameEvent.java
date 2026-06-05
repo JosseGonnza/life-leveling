@@ -86,6 +86,11 @@ public record GameEvent(GameEventType type, String message) {
                 String.format("⛩️ GATE COMPLETADA: %s", gateName));
     }
 
+    public static GameEvent gateAvailable(String gateName, String description) {
+        return new GameEvent(GameEventType.GATE_AVAILABLE,
+                String.format("⛩️ NUEVA GATE DISPONIBLE: %s — %s", gateName, description));
+    }
+
     public static GameEvent milestoneReached(String milestoneName) {
         return new GameEvent(GameEventType.MILESTONE_REACHED,
                 String.format("🏆 MILESTONE: %s alcanzado!", milestoneName));

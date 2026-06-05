@@ -28,12 +28,16 @@ public class GateService {
             return new GateVerificationResult(false, null, List.of(), "No hay más Gates disponibles para tu rango actual.");
         }
 
-        SystemQuestType gate = nextGateOpt.get();
+        return verifyGate(player, nextGateOpt.get());
+    }
+
+    /**
+     * Verifica una Gate concreta sin asumir que sea la siguiente de la cadena lineal.
+     * Necesario para las gates especiales (Vault/Redemption), que viven fuera de findNextGate.
+     */
+    public GateVerificationResult verifyGate(Player player, SystemQuestType gate) {
         GateTracker tracker = player.getGateTracker();
 
-        // Creamos el contexto. Pasamos 'gate' (el Enum) directamente.
-        // Si ConditionContext espera SystemQuest (Entidad), tendrás que ajustar ConditionContext para aceptar SystemQuestType
-        // o pasar null si tus condiciones no dependen de la instancia de la quest.
         ConditionContext context = ConditionContext.create(player, null, tracker);
 
         List<GateCondition> failedConditions = new ArrayList<>();
@@ -64,14 +68,23 @@ public class GateService {
      * Intenta completar la Gate y ascender al jugador.
      */
     public GateVerificationResult attemptGateCompletion(Player player) {
+        Optional<SystemQuestType> nextGateOpt = findNextGate(player);
+        if (nextGateOpt.isEmpty()) {
+            return new GateVerificationResult(false, null, List.of(), "No hay más Gates disponibles para tu rango actual.");
+        }
+        return attemptGate(player, nextGateOpt.get());
+    }
+
+    /**
+     * Intenta completar una Gate concreta (incluye las especiales Vault/Redemption).
+     */
+    public GateVerificationResult attemptGate(Player player, SystemQuestType gate) {
         // 1. Verificar requisitos
-        GateVerificationResult verification = verifyGateProgress(player);
+        GateVerificationResult verification = verifyGate(player, gate);
 
         if (!verification.success()) {
             return verification;
         }
-
-        SystemQuestType gate = verification.gate();
 
         // 2. Ascenso de rango (promoteToRank ignora null para gates especiales)
         player.promoteToRank(gate.getRankUnlocked());

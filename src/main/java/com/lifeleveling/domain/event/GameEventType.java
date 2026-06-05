@@ -17,6 +17,7 @@ public enum GameEventType {
     QUEST_FAILED,
     WEEKLY_QUEST_COMPLETED,
     GATE_COMPLETED,
+    GATE_AVAILABLE,
 
     // HP y Estado
     BURNOUT,
