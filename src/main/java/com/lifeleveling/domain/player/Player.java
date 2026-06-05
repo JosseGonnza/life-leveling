@@ -2,6 +2,7 @@ package com.lifeleveling.domain.player;
 
 import com.lifeleveling.domain.career.CareerEngine;
 import com.lifeleveling.domain.career.CareerReward;
+import com.lifeleveling.domain.career.CodeSessionConstants;
 import com.lifeleveling.domain.career.CodeSession;
 import com.lifeleveling.domain.debuff.Debuff;
 import com.lifeleveling.domain.debuff.DebuffTracker;
@@ -29,6 +30,9 @@ import java.util.UUID;
  * Player: La entidad raíz (Aggregate Root) del dominio.
  */
 public class Player {
+
+    private static final double JOB_BASE_RATE = 31.25; // G/hora base del JOB (Biblia 3.1)
+    private static final int JOB_MAX_HOURS = 16;        // Jornada máxima registrable (Biblia 1.1)
 
     private final UUID id;
     private final String name;
@@ -348,6 +352,24 @@ public class Player {
         return session;
     }
 
+    /**
+     * Registra una jornada de JOB (empleo alimenticio).
+     * Salario = round(horas × 31.25 × multiplicadorRango). Solo el JOB usa el rango.
+     * Desgaste 3 HP/h (con mitigación de equipo). XP nula (es tiempo vendido).
+     * Floor Rule: solo horas enteras; máximo 16h (Biblia cap 3.1 y 1.1).
+     */
+    public int registerJobSession(int hours) {
+        if (hours <= 0) return 0;
+        int workedHours = Math.min(hours, JOB_MAX_HOURS);
+        int salary = (int) Math.round(workedHours * JOB_BASE_RATE * currentRank.getGoldMultiplier());
+
+        if (salary > 0) this.wallet = wallet.add(salary);
+        takeWorkDamage(workedHours * CodeSessionConstants.HP_COST_PER_HOUR, workedHours);
+        notifyQuestCompleted("JOB", workedHours);
+
+        return salary;
+    }
+
     public void registerSleepSession(int hours) {
         if (hours <= 0) return;
         int baseXP = DailyQuestType.SLEEP.calculateReward(hours).generalXP();
@@ -406,11 +428,11 @@ public class Player {
     }
 
     public void addGold(int amount) {
-        double rankMultiplier = currentRank.getGoldMultiplier();
-        double baseWithRank = amount * rankMultiplier;
+        // El multiplicador de RANGO solo afecta al JOB (Biblia 3.1.4.B): misiones, loot
+        // y milestones son oro fijo. Aquí solo aplican los modificadores globales (HP/títulos).
         double hpMultiplier = hpState.getGoldMultiplier();
         double titleMultiplier = titleInventory.getGoldMultiplier();
-        int finalAmount = (int) Math.round(baseWithRank * hpMultiplier * titleMultiplier);
+        int finalAmount = (int) Math.round(amount * hpMultiplier * titleMultiplier);
         if (finalAmount > 0) this.wallet = wallet.add(finalAmount);
     }
 
