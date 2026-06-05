@@ -2,6 +2,7 @@ package com.lifeleveling.application;
 
 import com.lifeleveling.application.dto.DailyChecklistView;
 import com.lifeleveling.application.dto.PlayerView;
+import com.lifeleveling.application.dto.QuestView;
 import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.application.port.Notifier;
 import com.lifeleveling.application.port.PlayerRepository;
@@ -16,6 +17,9 @@ import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.system.GateVerificationResult;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 import com.lifeleveling.domain.quest.user.UserQuest;
+
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * GameFacade: única puerta de entrada para la "cara" (CLI/JavaFX/web).
@@ -119,17 +123,35 @@ public final class GameFacade {
     }
 
     public UserQuest createQuest(String name, String description, QuestRank rank) {
-        return quests.create(name, description, rank);
+        return createQuest(name, description, rank, null);
+    }
+
+    public UserQuest createQuest(String name, String description, QuestRank rank, LocalDate deadline) {
+        UserQuest quest = quests.create(game(), name, description, rank, deadline);
+        persist();
+        return quest;
+    }
+
+    public List<QuestView> activeQuests() {
+        return game().getActiveUserQuests().stream().map(QuestView::from).toList();
+    }
+
+    public PlayerView completeQuest(String questId) {
+        quests.complete(game(), questId);
+        return persistAndView();
+    }
+
+    public PlayerView failQuest(String questId) {
+        quests.fail(game(), questId);
+        return persistAndView();
     }
 
     public PlayerView completeQuest(UserQuest quest) {
-        quests.complete(game(), quest);
-        return persistAndView();
+        return completeQuest(quest.id().toString());
     }
 
     public PlayerView failQuest(UserQuest quest) {
-        quests.fail(game(), quest);
-        return persistAndView();
+        return failQuest(quest.id().toString());
     }
 
     public GateVerificationResult gateStatus() {

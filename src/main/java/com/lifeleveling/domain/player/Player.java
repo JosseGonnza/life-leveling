@@ -15,6 +15,7 @@ import com.lifeleveling.domain.item.ItemCategory;
 import com.lifeleveling.domain.quest.condition.GateTracker;
 import com.lifeleveling.domain.quest.daily.DailyQuestType;
 import com.lifeleveling.domain.quest.shared.QuestReward;
+import com.lifeleveling.domain.quest.user.UserQuest;
 import com.lifeleveling.domain.quest.weekly.WeeklyManager;
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
@@ -22,7 +23,9 @@ import com.lifeleveling.domain.title.TitleType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,6 +68,9 @@ public class Player {
 
     // [FASE 5] Gestor de Misiones Semanales
     private final WeeklyManager weeklyManager;
+
+    // User Quests en curso (PENDING/IN_PROGRESS). El agregado las posee; se borran al completarse/fallar.
+    private final Map<String, UserQuest> activeUserQuests = new LinkedHashMap<>();
 
     private BurnoutLock activeBurnoutLock;
 
@@ -408,11 +414,26 @@ public class Player {
      * Completa una User Quest: aplica su recompensa (solo XP, C1) y la registra en el día
      * para las condiciones de gate por rango/ventana (GATE 2 y 4). Devuelve la quest completada.
      */
-    public com.lifeleveling.domain.quest.user.UserQuest completeUserQuest(
-            com.lifeleveling.domain.quest.user.UserQuest quest, Instant completedAt) {
-        com.lifeleveling.domain.quest.user.UserQuest completed = quest.complete(completedAt);
+    public void addUserQuest(UserQuest quest) {
+        if (quest != null) activeUserQuests.put(quest.id().toString(), quest);
+    }
+
+    public List<UserQuest> getActiveUserQuests() {
+        return List.copyOf(activeUserQuests.values());
+    }
+
+    /** Completa una quest activa por id (camino de la UI: solo tiene el id). */
+    public UserQuest completeUserQuest(String questId, Instant completedAt) {
+        UserQuest quest = activeUserQuests.get(questId);
+        if (quest == null) throw new IllegalArgumentException("Quest no activa: " + questId);
+        return completeUserQuest(quest, completedAt);
+    }
+
+    public UserQuest completeUserQuest(UserQuest quest, Instant completedAt) {
+        UserQuest completed = quest.complete(completedAt);
         applyQuestReward(completed.reward());
         gateTracker.recordUserQuestCompleted(completed.rank(), completed.id().toString());
+        activeUserQuests.remove(quest.id().toString());
         return completed;
     }
 
@@ -549,7 +570,15 @@ public class Player {
         if (this.currentHP == 0 && activeBurnoutLock == null) triggerBurnout();
     }
 
-    public void applyUserQuestFailure(com.lifeleveling.domain.quest.user.UserQuest quest) {
+    /** Falla una quest activa por id (camino de la UI). */
+    public void applyUserQuestFailure(String questId) {
+        UserQuest quest = activeUserQuests.get(questId);
+        if (quest == null) throw new IllegalArgumentException("Quest no activa: " + questId);
+        applyUserQuestFailure(quest);
+    }
+
+    public void applyUserQuestFailure(UserQuest quest) {
+        activeUserQuests.remove(quest.id().toString());
         int hpDamage = quest.rank().getMoralDamage();
         if (hpDamage <= 0) return;
         System.out.println("❌ Quest Fallida: " + quest.name() + " (-" + hpDamage + " HP)");
