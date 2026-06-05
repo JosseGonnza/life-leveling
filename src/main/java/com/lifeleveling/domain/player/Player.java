@@ -162,6 +162,13 @@ public class Player {
     // ========================================================================================
 
     public void updateState(Instant now) {
+        LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+
+        // 0. Cerrar el día: volcar la actividad acumulada (horas, páginas, user quests, balance)
+        //    al histórico ANTES de limpiar los flags, para que las GateConditions tengan datos.
+        gateTracker.setDebuffsActiveToday(!debuffTracker.getActiveDebuffs().isEmpty());
+        gateTracker.closeDay(today, wallet.currentGold());
+
         // 1. Si termina el día y no lograste el Perfect Day, la racha vuelve a 0.
         if (!gateTracker.isPerfectDayAchievedToday()) {
             if (gateTracker.getPerfectDayStreak() > 0) {
@@ -178,7 +185,6 @@ public class Player {
 
         // 3. Rotación Semanal
         if (weeklyManager != null) {
-            LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
             weeklyManager.performWeeklyReset(today);
         }
 
@@ -262,6 +268,8 @@ public class Player {
 
         spendGold(finalPrice);
         inventory.recordPurchase(item);
+        gateTracker.recordConsumableBought(item.id());
+        if (item.category() == ItemCategory.LUXURY) gateTracker.recordLuxuryPurchase();
     }
 
     // ========================================================================================
@@ -347,6 +355,7 @@ public class Player {
 
         takeWorkDamage(reward.hpCost(), hours);
         gateTracker.setTotalCareerHours(careerEngine.getTotalCareerHours());
+        gateTracker.recordCareerHoursToday(hours);
         notifyQuestCompleted("CODE", hours);
 
         return session;
@@ -368,6 +377,29 @@ public class Player {
         notifyQuestCompleted("JOB", workedHours);
 
         return salary;
+    }
+
+    /**
+     * Registra lectura (READ): otorga WIS y acumula páginas del día (alimenta GATE 3 / Elder).
+     */
+    public void registerReadSession(int pages) {
+        if (pages <= 0) return;
+        applyQuestReward(DailyQuestType.READ.calculateReward(pages));
+        gateTracker.recordPagesRead(pages);
+        gateTracker.recordDailyQuestCompleted("READ");
+        notifyQuestCompleted("READ", pages);
+    }
+
+    /**
+     * Completa una User Quest: aplica su recompensa (solo XP, C1) y la registra en el día
+     * para las condiciones de gate por rango/ventana (GATE 2 y 4). Devuelve la quest completada.
+     */
+    public com.lifeleveling.domain.quest.user.UserQuest completeUserQuest(
+            com.lifeleveling.domain.quest.user.UserQuest quest, Instant completedAt) {
+        com.lifeleveling.domain.quest.user.UserQuest completed = quest.complete(completedAt);
+        applyQuestReward(completed.reward());
+        gateTracker.recordUserQuestCompleted(completed.rank(), completed.id().toString());
+        return completed;
     }
 
     public void registerSleepSession(int hours) {
@@ -451,6 +483,7 @@ public class Player {
     public void takeDamage(int amount) {
         this.currentHP = Math.max(0, currentHP - amount);
         this.hpState = HPState.fromHP(this.currentHP);
+        gateTracker.recordHPSnapshot(this.currentHP);
         if (this.currentHP == 0 && activeBurnoutLock == null) triggerBurnout();
     }
 

@@ -49,6 +49,16 @@ public class GateTracker {
     private boolean perfectDayAchievedToday = false;
     private boolean burnoutOccurredToday = false;
 
+    // Acumuladores de la actividad del DÍA EN CURSO. Se vuelcan en un DailyHistory al cerrar el día
+    // (closeDay) y se resetean. Sin esto, las ventanas temporales (getXInLastDays) leen histórico vacío.
+    private int todayPagesRead = 0;
+    private double todayCareerHours = 0.0;
+    private int todayMinHP = 100;
+    private boolean todayHadDebuffsActive = false;
+    private final List<String> todayConsumablesBought = new ArrayList<>();
+    private final Set<String> todayCompletedQuestIds = new HashSet<>();
+    private final Map<QuestRank, Integer> todayCompletedQuestsCount = new HashMap<>();
+
     public GateTracker() {}
 
     // ========================================================================================
@@ -107,6 +117,69 @@ public class GateTracker {
     public void recordLuxuryPurchase() {
         this.lastLuxuryPurchaseDate = LocalDate.now();
         this.consecutiveDaysAbove20k = 0;
+    }
+
+    // ---- Acumuladores de actividad del día en curso ----
+
+    public void recordPagesRead(int pages) {
+        if (pages > 0) this.todayPagesRead += pages;
+    }
+
+    public void recordCareerHoursToday(double hours) {
+        if (hours > 0) this.todayCareerHours += hours;
+    }
+
+    public void recordConsumableBought(String itemId) {
+        if (itemId != null) this.todayConsumablesBought.add(itemId);
+    }
+
+    public void recordUserQuestCompleted(QuestRank rank, String questId) {
+        if (questId != null) this.todayCompletedQuestIds.add(questId);
+        if (rank != null) this.todayCompletedQuestsCount.merge(rank, 1, Integer::sum);
+    }
+
+    public void recordDailyQuestCompleted(String questId) {
+        if (questId != null) this.todayCompletedQuestIds.add(questId);
+    }
+
+    public void recordHPSnapshot(int hp) {
+        if (hp < this.todayMinHP) this.todayMinHP = hp;
+    }
+
+    public void setDebuffsActiveToday(boolean active) {
+        if (active) this.todayHadDebuffsActive = true;
+    }
+
+    /**
+     * Cierra el día: vuelca la actividad acumulada en un DailyHistory consultable por las
+     * GateConditions y reinicia los acumuladores. El orquestador (capa app) lo invoca en el rollover.
+     */
+    public void closeDay(LocalDate date, int endOfDayGold) {
+        DailyHistory snapshot = new DailyHistory(
+                date,
+                perfectDayAchievedToday,
+                todayMinHP,
+                todayPagesRead,
+                todayCareerHours,
+                burnoutOccurredToday,
+                todayHadDebuffsActive,
+                List.copyOf(todayConsumablesBought),
+                Set.copyOf(todayCompletedQuestIds),
+                Map.copyOf(todayCompletedQuestsCount)
+        );
+        addDailyHistory(snapshot);
+        recordDailyBalance(endOfDayGold);
+        resetDailyAccumulators();
+    }
+
+    private void resetDailyAccumulators() {
+        this.todayPagesRead = 0;
+        this.todayCareerHours = 0.0;
+        this.todayMinHP = 100;
+        this.todayHadDebuffsActive = false;
+        this.todayConsumablesBought.clear();
+        this.todayCompletedQuestIds.clear();
+        this.todayCompletedQuestsCount.clear();
     }
 
     // ========================================================================================
