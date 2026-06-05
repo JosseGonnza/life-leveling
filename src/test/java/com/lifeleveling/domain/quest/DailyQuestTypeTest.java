@@ -219,15 +219,16 @@ class DailyQuestTypeTest {
     @Nested
     class IntegerRewards {
         @Test
-        @DisplayName("SLEEP da +15 XP General por hora (según Biblia), máximo 8.5h")
+        @DisplayName("SLEEP da +15 XP General por hora (según Biblia, ruling A3), máximo 12h")
         void sleep_gives15XPPerHour() {
-            // 15 XP/h según la Biblia
+            // 15 XP/h general según la Biblia (ruling A3: sin stat, hasta 12h)
             assertEquals(105, DailyQuestType.SLEEP.calculateReward(7).generalXP());  // 7 * 15 = 105
             assertEquals(120, DailyQuestType.SLEEP.calculateReward(8).generalXP());  // 8 * 15 = 120
 
-            // Máximo 8.5h computables (127.5 -> 127 XP)
-            assertEquals(127, DailyQuestType.SLEEP.calculateReward(9).generalXP());  // min(9, 8.5) * 15 = 127
-            assertEquals(127, DailyQuestType.SLEEP.calculateReward(12).generalXP()); // Capped at 8.5h
+            // Máximo 12h computables (12 * 15 = 180 XP)
+            assertEquals(165, DailyQuestType.SLEEP.calculateReward(11).generalXP()); // 11 * 15 = 165
+            assertEquals(180, DailyQuestType.SLEEP.calculateReward(12).generalXP()); // 12 * 15 = 180
+            assertEquals(180, DailyQuestType.SLEEP.calculateReward(14).generalXP()); // Capped at 12h
         }
 
         @Test

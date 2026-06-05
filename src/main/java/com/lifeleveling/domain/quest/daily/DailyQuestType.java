@@ -95,7 +95,7 @@ public enum DailyQuestType {
     public QuestReward calculateReward(int value) {
         if (!requiresNumericInput()) throw new IllegalStateException("Requiere input INTEGER");
         return switch (this) {
-            case SLEEP -> QuestReward.ofGeneralXP((int) (Math.min(value, 8.5) * 15));
+            case SLEEP -> QuestReward.ofGeneralXP((int) (Math.min(value, 12) * 15));
             case READ -> QuestReward.ofSingleStat(StatType.WISDOM, value * 5);
             default -> QuestReward.empty();
         };

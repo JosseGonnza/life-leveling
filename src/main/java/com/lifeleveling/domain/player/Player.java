@@ -12,6 +12,7 @@ import com.lifeleveling.domain.item.Inventory;
 import com.lifeleveling.domain.item.Item;
 import com.lifeleveling.domain.item.ItemCategory;
 import com.lifeleveling.domain.quest.condition.GateTracker;
+import com.lifeleveling.domain.quest.daily.DailyQuestType;
 import com.lifeleveling.domain.quest.shared.QuestReward;
 import com.lifeleveling.domain.quest.weekly.WeeklyManager;
 import com.lifeleveling.domain.title.TitleInventory;
@@ -349,13 +350,12 @@ public class Player {
 
     public void registerSleepSession(int hours) {
         if (hours <= 0) return;
-        int baseXP = Math.min(hours, 8) * 50;
+        int baseXP = DailyQuestType.SLEEP.calculateReward(hours).generalXP();
         double itemMultiplier = inventory.getSleepXPMultiplier();
         int finalXP = (int) (baseXP * itemMultiplier);
 
-        addXP(StatType.CHARISMA, finalXP);
-        int hpRecovery = hours * 5;
-        heal(hpRecovery);
+        addGeneralXP(finalXP);
+        heal(DailyQuestType.SLEEP.calculateDynamicHP(hours));
         notifyQuestCompleted("SLEEP", hours);
 
         if (itemMultiplier > 1.0) {
