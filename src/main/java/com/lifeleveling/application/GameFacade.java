@@ -1,0 +1,146 @@
+package com.lifeleveling.application;
+
+import com.lifeleveling.application.dto.PlayerView;
+import com.lifeleveling.application.port.Clock;
+import com.lifeleveling.application.port.Notifier;
+import com.lifeleveling.application.port.PlayerRepository;
+import com.lifeleveling.application.service.CareerService;
+import com.lifeleveling.application.service.DayService;
+import com.lifeleveling.application.service.GateChallengeService;
+import com.lifeleveling.application.service.QuestService;
+import com.lifeleveling.application.service.ShopService;
+import com.lifeleveling.domain.player.Player;
+import com.lifeleveling.domain.quest.shared.QuestRank;
+import com.lifeleveling.domain.quest.system.GateVerificationResult;
+import com.lifeleveling.domain.quest.user.UserQuest;
+
+/**
+ * GameFacade: única puerta de entrada para la "cara" (CLI/JavaFX/web).
+ * Mantiene la partida activa, delega en los servicios, persiste tras cada comando
+ * y reenvía los eventos del dominio al Notifier. No conoce ninguna tecnología de UI.
+ */
+public final class GameFacade {
+
+    private final PlayerRepository repository;
+    private final Notifier notifier;
+
+    private final CareerService career = new CareerService();
+    private final ShopService shop = new ShopService();
+    private final QuestService quests;
+    private final GateChallengeService gates = new GateChallengeService();
+    private final DayService day;
+
+    private Player current;
+
+    public GameFacade(PlayerRepository repository, Clock clock, Notifier notifier) {
+        this.repository = repository;
+        this.notifier = notifier;
+        this.quests = new QuestService(clock);
+        this.day = new DayService(clock);
+    }
+
+    // ----- Ciclo de vida de la partida -----
+
+    public PlayerView newGame(String name) {
+        this.current = Player.create(name);
+        wireEvents();
+        persist();
+        return state();
+    }
+
+    public boolean loadGame() {
+        var loaded = repository.load();
+        loaded.ifPresent(p -> {
+            this.current = p;
+            wireEvents();
+        });
+        return loaded.isPresent();
+    }
+
+    // ----- Comandos -----
+
+    public PlayerView workCode(double hours) {
+        career.code(game(), hours);
+        return persistAndView();
+    }
+
+    public PlayerView workJob(int hours) {
+        career.job(game(), hours);
+        return persistAndView();
+    }
+
+    public PlayerView buy(String itemId) {
+        shop.buy(game(), itemId);
+        return persistAndView();
+    }
+
+    public PlayerView consume(String itemId) {
+        shop.consume(game(), itemId);
+        return persistAndView();
+    }
+
+    public PlayerView equip(String itemId) {
+        shop.equip(game(), itemId);
+        return persistAndView();
+    }
+
+    public UserQuest createQuest(String name, String description, QuestRank rank) {
+        return quests.create(name, description, rank);
+    }
+
+    public PlayerView completeQuest(UserQuest quest) {
+        quests.complete(game(), quest);
+        return persistAndView();
+    }
+
+    public PlayerView failQuest(UserQuest quest) {
+        quests.fail(game(), quest);
+        return persistAndView();
+    }
+
+    public GateVerificationResult gateStatus() {
+        return gates.status(game());
+    }
+
+    public GateVerificationResult challengeGate() {
+        GateVerificationResult result = gates.challenge(game());
+        persist();
+        return result;
+    }
+
+    public void confirmGate(String confirmationId) {
+        gates.confirm(game(), confirmationId);
+        persist();
+    }
+
+    public PlayerView endDay() {
+        day.endDay(game());
+        return persistAndView();
+    }
+
+    // ----- Consultas -----
+
+    public PlayerView state() {
+        return PlayerView.from(game());
+    }
+
+    // ----- Internos -----
+
+    private Player game() {
+        if (current == null) throw new IllegalStateException("No hay partida activa (usa newGame o loadGame)");
+        return current;
+    }
+
+    private void wireEvents() {
+        current.getEventPublisher().addListener(notifier::onEvent);
+    }
+
+    private void persist() {
+        repository.save(current);
+    }
+
+    private PlayerView persistAndView() {
+        persist();
+        return state();
+    }
+}
