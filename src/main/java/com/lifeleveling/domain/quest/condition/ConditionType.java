@@ -103,7 +103,7 @@ public enum ConditionType {
      * GOLD_THRESHOLD: Oro mínimo en wallet.
      *
      * Ejemplos:
-     *   - GATE_WEALTH: Tener 20,000 G simultáneamente
+     *   - GATE_VAULT: Tener 20.000 G simultáneamente
      *
      * Características:
      *   - Automática
@@ -116,7 +116,7 @@ public enum ConditionType {
      * CONSUMABLE_ABSTINENCE: No comprar consumible específico durante periodo.
      *
      * Ejemplos:
-     *   - GATE_WEALTH: No comprar "Festín Trampa" en 10 días
+     *   - GATE_VAULT: No comprar caprichos durante el reto
      *   - ELDER_2: No comprar caprichos durante 30 días
      *
      * Características:
@@ -144,7 +144,7 @@ public enum ConditionType {
      * TIME_LIMIT: Límite de tiempo activo (se reinicia si falla).
      *
      * Ejemplos:
-     *   - GATE_C_TO_B_PHASE_2: Completar proyecto en 7 días
+     *   - GATE_C_PLUS_TO_B: Completar User Quest rango B en 7 días
      *
      * Características:
      *   - Automática
@@ -170,7 +170,7 @@ public enum ConditionType {
      * PAGES_READ: Páginas leídas en periodo específico.
      *
      * Ejemplos:
-     *   - GATE_C_TO_B_PHASE_1: 500 páginas en 7 días
+     *   - GATE_C_TO_C_PLUS: 500 páginas en 7 días
      *   - ELDER_3: 1,000 páginas en 30 días
      *
      * Características:
@@ -184,7 +184,7 @@ public enum ConditionType {
      * NO_BURNOUT: Sin entrar en burnout durante periodo activo.
      *
      * Ejemplos:
-     *   - GATE_C_TO_B_PHASE_2: No entrar en BURNOUT durante los 7 días
+     *   - GATE_C_PLUS_TO_B: No entrar en BURNOUT durante los 7 días
      *
      * Características:
      *   - Automática

@@ -13,11 +13,10 @@ public enum PlayerRank {
     E("Novato", "🌱", 1.0),
     D("Iniciado", "🐣", 1.0),
     C("Junior", "🔨", 1.5),
+    C_PLUS("Junior Adv.", "⚙️", 2.0),
     B("Mid-Level", "🔧", 2.5),
     A("Senior", "🎩", 4.0),
-    S("Architect", "🏗️", 8.0),
-    S_PLUS("Monarca", "👑", 8.0),
-    S_PLUS_PLUS("Dios", "🌟", 8.0);
+    S("Architect", "🏗️", 8.0);
 
     private final String displayName;
     private final String icon;

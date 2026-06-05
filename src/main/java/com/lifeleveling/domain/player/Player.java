@@ -384,7 +384,7 @@ public class Player {
         }
     }
 
-    private void applyQuestReward(QuestReward reward) {
+    public void applyQuestReward(QuestReward reward) {
         reward.statXP().forEach((stat, xp) -> { if (xp > 0) addXP(stat, xp); });
         if (reward.generalXP() > 0) addGeneralXP(reward.generalXP());
         if (reward.gold() > 0) addGold(reward.gold());

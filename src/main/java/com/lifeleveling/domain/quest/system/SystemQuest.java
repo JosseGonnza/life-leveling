@@ -61,9 +61,8 @@ public final class SystemQuest implements Quest {
             throw new IllegalStateException("No se puede completar una quest en estado " + status);
         }
 
-        // 1. Dar recompensas base
-        player.addGeneralXP(type.getBaseXP());
-        player.addGold(type.getBaseGold());
+        // 1. Dar recompensas base (respeta rewardStat, p.ej. GATE 3 → INT XP)
+        player.applyQuestReward(type.getBaseReward());
 
         // 2. Ascenso de Rango
         // [CORRECCIÓN] Como type.getRankUnlocked() ya devuelve PlayerRank, lo pasamos directo.
@@ -139,6 +138,9 @@ public final class SystemQuest implements Quest {
         StringBuilder sb = new StringBuilder();
         QuestReward r = type.getBaseReward();
         if (r.generalXP() > 0) sb.append(String.format("⭐ +%,d XP", r.generalXP()));
+        r.statXP().forEach((stat, xp) -> {
+            if (xp > 0) sb.append(String.format("⭐ +%,d %s XP", xp, stat.name()));
+        });
         if (r.gold() > 0) sb.append(String.format(" | 💰 +%,d G", r.gold()));
         if (type.getRankUnlocked() != null) sb.append(" | 🔓 Rango ").append(type.getRankUnlocked().name());
         return sb.toString();

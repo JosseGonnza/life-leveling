@@ -73,20 +73,19 @@ public class GateService {
 
         SystemQuestType gate = verification.gate();
 
-        // 2. Ejecutar Ascenso
-        // Promocionar Rango (Usamos el getter correcto del Enum)
+        // 2. Ascenso de rango (promoteToRank ignora null para gates especiales)
         player.promoteToRank(gate.getRankUnlocked());
 
-        // Registrar en historial
+        // 3. Registrar en historial
         player.getGateTracker().markGateAsCompleted(gate);
 
-        // Entregar recompensas (Usamos los getters correctos del Enum)
-        player.addGold(gate.getBaseGold());
-        player.addGeneralXP(gate.getBaseXP());
+        // 4. Entregar recompensas (respeta rewardStat, p.ej. GATE 3 → INT XP)
+        player.applyQuestReward(gate.getBaseReward());
 
         System.out.println("⛩️ GATE COMPLETADA: " + gate.getName());
-        System.out.println("   Rank Up: " + gate.getRankUnlocked());
-        System.out.println("   Rewards: " + gate.getBaseGold() + " G, " + gate.getBaseXP() + " XP");
+        if (gate.getRankUnlocked() != null) {
+            System.out.println("   Rank Up: " + gate.getRankUnlocked());
+        }
 
         return verification;
     }
@@ -97,38 +96,16 @@ public class GateService {
      */
     private Optional<SystemQuestType> findNextGate(Player player) {
         PlayerRank currentRank = player.getCurrentRank();
-        GateTracker tracker = player.getGateTracker();
 
+        // Cadena lineal de ascenso (Biblia cap 2.4). Vault y Redemption quedan fuera (especiales).
         return switch (currentRank) {
             case E -> Optional.of(SystemQuestType.GATE_E_TO_D);
-
             case D -> Optional.of(SystemQuestType.GATE_D_TO_C);
-
-            case C -> {
-                // Rango C tiene dos fases. Verificamos si ya completó la primera.
-                if (!tracker.isGateCompleted(SystemQuestType.GATE_C_TO_B_PHASE_1)) {
-                    yield Optional.of(SystemQuestType.GATE_C_TO_B_PHASE_1);
-                } else {
-                    yield Optional.of(SystemQuestType.GATE_C_TO_B_PHASE_2);
-                }
-            }
-
-            case B -> {
-                // Rango B tiene VAULT y luego B_TO_A (según tu Enum)
-                if (!tracker.isGateCompleted(SystemQuestType.GATE_VAULT)) {
-                    yield Optional.of(SystemQuestType.GATE_VAULT);
-                } else {
-                    yield Optional.of(SystemQuestType.GATE_B_TO_A);
-                }
-            }
-
+            case C -> Optional.of(SystemQuestType.GATE_C_TO_C_PLUS);
+            case C_PLUS -> Optional.of(SystemQuestType.GATE_C_PLUS_TO_B);
+            case B -> Optional.of(SystemQuestType.GATE_B_TO_A);
             case A -> Optional.of(SystemQuestType.GATE_A_TO_S);
-
-            case S -> Optional.of(SystemQuestType.GATE_S_TO_S_PLUS);
-
-            case S_PLUS -> Optional.of(SystemQuestType.GATE_ENDGAME);
-
-            default -> Optional.empty(); // S_PLUS_PLUS o rangos superiores
+            case S -> Optional.of(SystemQuestType.GATE_ENDGAME);
         };
     }
 }

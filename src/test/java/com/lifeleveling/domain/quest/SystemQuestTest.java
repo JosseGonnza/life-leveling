@@ -55,7 +55,7 @@ class SystemQuestTest {
         @DisplayName("name() retorna el nombre del tipo")
         void name_returnsTypeName() {
             SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_A_TO_S);
-            assertEquals("Cambio de Clase: Junior Developer", gate.name());
+            assertEquals("Independencia", gate.name());
         }
 
         @Test
@@ -80,7 +80,7 @@ class SystemQuestTest {
 
             QuestReward reward = gate.reward();
             assertEquals(1_500, reward.generalXP());
-            assertEquals(2_000, reward.gold());
+            assertEquals(1_000, reward.gold());
         }
     }
 
@@ -300,10 +300,12 @@ class SystemQuestTest {
 
         @ParameterizedTest
         @EnumSource(SystemQuestType.class)
-        @DisplayName("Todas las gates desbloquean un rango")
-        void allGates_unlockRank(SystemQuestType type) {
+        @DisplayName("Las gates de ascenso (no especiales) desbloquean un rango")
+        void ascentGates_unlockRank(SystemQuestType type) {
             SystemQuest gate = SystemQuest.create(type);
-            assertNotNull(gate.getRankUnlocked());
+            if (!type.isSpecialGate()) {
+                assertNotNull(gate.getRankUnlocked());
+            }
         }
     }
 
@@ -379,31 +381,29 @@ class SystemQuestTest {
 
             assertTrue(display.contains("🟡"));
             assertTrue(display.contains("[S]"));
-            assertTrue(display.contains("Cambio de Clase: Junior Developer"));
-            assertTrue(display.contains("Lvl 60"));
+            assertTrue(display.contains("Independencia"));
+            assertTrue(display.contains("Lvl 75"));
             assertTrue(display.contains("Pendiente"));
         }
 
         @Test
         @DisplayName("formatReward() formatea recompensas correctamente")
         void whenFormattingReward_thenCorrectFormat() {
-            SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_A_TO_S);
+            SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_C_PLUS_TO_B);
 
             String reward = gate.formatReward();
 
             assertTrue(reward.contains("⭐"));
-            assertTrue(reward.contains("20"));
             assertTrue(reward.contains("000 XP"));
             assertTrue(reward.contains("💰"));
-            assertTrue(reward.contains("50"));
             assertTrue(reward.contains("000 G"));
-            assertTrue(reward.contains("🔓 Rango S"));
+            assertTrue(reward.contains("🔓 Rango B"));
         }
 
         @Test
         @DisplayName("formatReward() maneja gates sin Gold")
         void whenFormattingRewardWithoutGold_thenCorrectFormat() {
-            SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_C_TO_B_PHASE_1);
+            SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_C_TO_C_PLUS);
 
             String reward = gate.formatReward();
 
@@ -480,14 +480,14 @@ class SystemQuestTest {
         }
 
         @Test
-        @DisplayName("Gates masivas (A→S, ENDGAME) tienen recompensas épicas")
-        void massiveGates_haveEpicRewards() {
-            SystemQuest bossGate = SystemQuest.create(SystemQuestType.GATE_A_TO_S);
-            bossGate = bossGate.complete(Instant.now());
+        @DisplayName("La gate C+→B (La Prueba) tiene recompensa sólida")
+        void heavyGate_hasSolidReward() {
+            SystemQuest gate = SystemQuest.create(SystemQuestType.GATE_C_PLUS_TO_B);
+            gate = gate.complete(Instant.now());
 
-            QuestReward reward = bossGate.reward();
-            assertTrue(reward.generalXP() >= 20_000);
-            assertTrue(reward.gold() >= 50_000);
+            QuestReward reward = gate.reward();
+            assertTrue(reward.generalXP() >= 3_000);
+            assertTrue(reward.gold() >= 3_000);
         }
     }
 }

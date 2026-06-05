@@ -1,86 +1,84 @@
 package com.lifeleveling.domain.quest.system;
 
 import com.lifeleveling.domain.player.PlayerRank;
+import com.lifeleveling.domain.player.StatType;
+import com.lifeleveling.domain.quest.condition.CareerHoursInPeriod;
 import com.lifeleveling.domain.quest.condition.FinancialDiscipline;
 import com.lifeleveling.domain.quest.condition.GateCondition;
+import com.lifeleveling.domain.quest.condition.HPThreshold;
+import com.lifeleveling.domain.quest.condition.LevelRequirement;
+import com.lifeleveling.domain.quest.condition.ManualConfirmation;
+import com.lifeleveling.domain.quest.condition.NoBurnout;
+import com.lifeleveling.domain.quest.condition.PagesRead;
+import com.lifeleveling.domain.quest.condition.PerfectDayStreak;
+import com.lifeleveling.domain.quest.condition.UserQuestsCompleted;
+import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.shared.QuestReward;
 
 import java.util.List;
 
+/**
+ * Las Gates (System Quests): hitos obligatorios de ascenso de rango profesional.
+ * Cadena fiel a La Biblia (cap 2.4): E → D → C → C+ → B → A → S.
+ * Vault y Redemption son especiales (fuera de la cadena de ascenso).
+ */
 public enum SystemQuestType {
 
     GATE_E_TO_D(
-            "🟢", "La Semana del Infierno",
-            "Completar 7/7 Daily Quests durante 7 días sin bajar de HP 50",
-            10, null, PlayerRank.D, 500, 1_000,
-            List.of(
-                    // Deberíamos añadir: new PerfectDayStreak(7), new HPThreshold(50, 7)
-            )
+            "🟢", "El Portal del Novato",
+            "Completar 7 Perfect Days consecutivos.",
+            10, null, PlayerRank.D, 500, 500, null,
+            List.of(new PerfectDayStreak(7))
     ),
     GATE_D_TO_C(
-            "🔵", "El Primer Encargo",
-            "Ya tienes hábitos. Ahora úsalos para construir algo.",
-            25, GATE_E_TO_D, PlayerRank.C, 1_500, 2_000,
-            List.of()
+            "🔵", "El Despertar",
+            "Acumular 20h de CODE + 3 User Quests completadas en 7 días.",
+            25, GATE_E_TO_D, PlayerRank.C, 1_500, 1_000, null,
+            List.of(new CareerHoursInPeriod(20, 7), new UserQuestsCompleted(3, 7, QuestRank.E))
     ),
-    GATE_C_TO_B_PHASE_1(
-            "🟣", "La Biblioteca de Babel (Teoría)",
-            "Completar un Proyecto Personal sin fecha límite + Leer 100 páginas",
-            35, GATE_D_TO_C, PlayerRank.C, 1_000, 0,
-            List.of(
-                    // Deberíamos añadir: new PagesRead(100, 30)
-            )
+    GATE_C_TO_C_PLUS(
+            "🟣", "La Barrera (Teoría)",
+            "Leer 500 páginas en 7 días.",
+            35, GATE_D_TO_C, PlayerRank.C_PLUS, 1_000, 0, StatType.INTELLECT,
+            List.of(new PagesRead(500, 7))
     ),
-    GATE_C_TO_B_PHASE_2(
-            "🟣", "Hackathon Personal (Práctica)",
-            "Proyecto Personal en 7 días sin BURNOUT",
-            35, GATE_C_TO_B_PHASE_1, PlayerRank.B, 3_000, 5_000,
-            List.of(
-                    // Deberíamos añadir: new NoBurnout(), new TimeLimit(7)
-            )
+    GATE_C_PLUS_TO_B(
+            "🟣", "La Prueba (Práctica)",
+            "Crear y completar una User Quest de Rango B en 7 días sin Burnout.",
+            35, GATE_C_TO_C_PLUS, PlayerRank.B, 3_000, 3_000, null,
+            List.of(new UserQuestsCompleted(1, 7, QuestRank.B), new NoBurnout())
     ),
-
-    GATE_VAULT(
-            "💰", "The Vault (La Bóveda)",
-            "Demuestra tu disciplina financiera: mantén 20k G durante 7 días sin caprichos.",
-            40, GATE_C_TO_B_PHASE_2, PlayerRank.A, 2_000, 5_000,
-            List.of(
-                    // [CAMBIO] Usamos la nueva condición que verifica la RACHA del Tracker
-                    new FinancialDiscipline(7)
-            )
-    ),
-
     GATE_B_TO_A(
-            "🟠", "La Cacería de Empleo (Simulacro)",
-            "Aplicar a 10 ofertas o 3 entrevistas.",
-            50, GATE_VAULT, PlayerRank.A, 5_000, 0, // Actualizado previo a GATE_VAULT
-            List.of()
+            "🟠", "La Conquista",
+            "Conseguir un nuevo empleo o cliente.",
+            50, GATE_C_PLUS_TO_B, PlayerRank.A, 5_000, 0, null,
+            List.of(new ManualConfirmation("gate_conquista", "Nuevo empleo o cliente conseguido"))
     ),
     GATE_A_TO_S(
-            "🟡", "Cambio de Clase: Junior Developer",
-            "Conseguir empleo o primer cliente freelance REAL",
-            60, GATE_B_TO_A, PlayerRank.S, 20_000, 50_000,
-            List.of()
+            "🟡", "Independencia",
+            "1 año de sueldo ahorrado de colchón.",
+            75, GATE_B_TO_A, PlayerRank.S, 0, 0, null,
+            List.of(new ManualConfirmation("gate_independencia", "1 año de sueldo ahorrado"))
     ),
-    GATE_S_TO_S_PLUS(
-            "✨", "Territorio Propio",
-            "Independencia habitacional.",
-            75, GATE_A_TO_S, PlayerRank.S_PLUS, 50_000, 0,
-            List.of()
+    GATE_ENDGAME(
+            "🌌", "El Monarca de las Sombras",
+            "Alcanzar Nivel 100.",
+            100, GATE_A_TO_S, PlayerRank.S, 0, 0, null,
+            List.of(new LevelRequirement(100))
+    ),
+
+    // ---- Especiales (fuera de la cadena de ascenso) ----
+    GATE_VAULT(
+            "💰", "The Vault (La Bóveda)",
+            "Mantener 20.000 G durante 7 días sin caprichos.",
+            40, null, null, 0, 10_000, null,
+            List.of(new FinancialDiscipline(7))
     ),
     GATE_REDEMPTION(
             "💀", "Salir del Abismo",
             "Mantener HP > 80 durante 14 días tras caer en desgracia.",
-            0, null, PlayerRank.B, 1_000, 2_000,
-            List.of(
-                    // new HPThreshold(80, 14)
-            )
-    ),
-    GATE_ENDGAME(
-            "🌌", "El Monarca de las Sombras",
-            "Game Over.",
-            100, GATE_S_TO_S_PLUS, PlayerRank.S_PLUS_PLUS, 100_000, 500_000,
-            List.of()
+            0, null, null, 1_000, 0, null,
+            List.of(new HPThreshold(80, 14))
     );
 
     private final String icon;
@@ -91,11 +89,12 @@ public enum SystemQuestType {
     private final PlayerRank rankUnlocked;
     private final int baseXP;
     private final int baseGold;
-    private final List<GateCondition> conditions; // [NUEVO]
+    private final StatType rewardStat;
+    private final List<GateCondition> conditions;
 
     SystemQuestType(String icon, String name, String description, int levelRequirement,
                     SystemQuestType previousGate, PlayerRank rankUnlocked, int baseXP, int baseGold,
-                    List<GateCondition> conditions) {
+                    StatType rewardStat, List<GateCondition> conditions) {
         this.icon = icon;
         this.name = name;
         this.description = description;
@@ -104,20 +103,26 @@ public enum SystemQuestType {
         this.rankUnlocked = rankUnlocked;
         this.baseXP = baseXP;
         this.baseGold = baseGold;
+        this.rewardStat = rewardStat;
         this.conditions = conditions;
     }
 
-    public boolean isFirstGate() { return previousGate == null; }
+    public boolean isFirstGate() { return this == GATE_E_TO_D; }
     public boolean hasPreviousGate() { return previousGate != null; }
-    public boolean isSpecialGate() { return this == GATE_REDEMPTION; }
+    public boolean isSpecialGate() { return this == GATE_REDEMPTION || this == GATE_VAULT; }
     public boolean isEndgame() { return this == GATE_ENDGAME; }
     public boolean meetsLevelRequirement(int lvl) { return lvl >= levelRequirement; }
 
     public QuestReward getBaseReward() {
-        return QuestReward.builder().setGeneralXP(baseXP).setGold(baseGold).build();
+        QuestReward.Builder builder = QuestReward.builder().setGold(baseGold);
+        if (rewardStat != null) {
+            builder.addStatXP(rewardStat, baseXP);
+        } else {
+            builder.setGeneralXP(baseXP);
+        }
+        return builder.build();
     }
 
-    // Getter para las condiciones
     public List<GateCondition> getConditions() { return conditions; }
 
     public String getName() { return name; }
@@ -128,6 +133,7 @@ public enum SystemQuestType {
     public PlayerRank getRankUnlocked() { return rankUnlocked; }
     public int getBaseXP() { return baseXP; }
     public int getBaseGold() { return baseGold; }
+    public StatType getRewardStat() { return rewardStat; }
 
     public String toDisplayString() { return icon + " " + name; }
 }
