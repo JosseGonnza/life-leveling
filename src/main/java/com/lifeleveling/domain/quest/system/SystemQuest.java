@@ -1,9 +1,11 @@
 package com.lifeleveling.domain.quest.system;
 
 import com.lifeleveling.domain.player.Player;
+import com.lifeleveling.domain.player.PlayerRank;
 import com.lifeleveling.domain.quest.shared.*;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * SystemQuest: Las Gates épicas de ascenso de rango.
@@ -17,6 +19,9 @@ public final class SystemQuest implements Quest {
     private final Instant completedAt;
 
     private SystemQuest(QuestId id, SystemQuestType type, QuestStatus status, Instant createdAt, Instant completedAt) {
+        if (id == null) throw new IllegalArgumentException("El ID no puede ser null");
+        if (type == null) throw new IllegalArgumentException("El tipo de gate no puede ser null");
+        if (status == null) throw new IllegalArgumentException("El estado no puede ser null");
         this.id = id;
         this.type = type;
         this.status = status;
@@ -33,6 +38,12 @@ public final class SystemQuest implements Quest {
     }
 
     public static SystemQuest reconstitute(QuestId id, SystemQuestType type, QuestStatus status, Instant createdAt, Instant completedAt) {
+        if (status == QuestStatus.FAILED || status == QuestStatus.EXPIRED) {
+            throw new IllegalArgumentException("Las System Quests no pueden estar en estado " + status);
+        }
+        if (status == QuestStatus.COMPLETED && completedAt == null) {
+            throw new IllegalArgumentException("Una gate COMPLETED requiere completedAt");
+        }
         return new SystemQuest(id, type, status, createdAt, completedAt);
     }
 
@@ -70,14 +81,16 @@ public final class SystemQuest implements Quest {
     }
 
     /**
-     * @deprecated Usar complete(Player, Instant) para SystemQuests.
+     * Transición pura a COMPLETED (sin aplicar efectos al jugador).
+     * Para aplicar recompensas y ascenso de rango, usar complete(Player, Instant).
      */
     @Override
-    @Deprecated
     public SystemQuest complete(Instant completedAt) {
-        throw new UnsupportedOperationException(
-                "SystemQuest requiere un Player para completarse. Usa complete(player, timestamp)."
-        );
+        if (completedAt == null) throw new IllegalArgumentException("Timestamp no puede ser null");
+        if (!status.canTransitionTo(QuestStatus.COMPLETED)) {
+            throw new IllegalStateException("No se puede completar una quest en estado " + status);
+        }
+        return new SystemQuest(id, type, QuestStatus.COMPLETED, createdAt, completedAt);
     }
 
     @Override
@@ -130,4 +143,38 @@ public final class SystemQuest implements Quest {
         if (type.getRankUnlocked() != null) sb.append(" | 🔓 Rango ").append(type.getRankUnlocked().name());
         return sb.toString();
     }
+
+    // ========================================================================================
+    // QUERIES (delegan en el tipo)
+    // ========================================================================================
+
+    public Instant getCompletedAt() { return completedAt; }
+    public int getLevelRequirement() { return type.getLevelRequirement(); }
+    public SystemQuestType getPreviousGate() { return type.getPreviousGate(); }
+    public PlayerRank getRankUnlocked() { return type.getRankUnlocked(); }
+    public boolean isFirstGate() { return type.isFirstGate(); }
+    public boolean requiresPreviousGate() { return type.hasPreviousGate(); }
+    public boolean meetsLevelRequirement(int playerLevel) { return type.meetsLevelRequirement(playerLevel); }
+    public boolean isSpecialGate() { return type.isSpecialGate(); }
+    public boolean isEndgame() { return type.isEndgame(); }
+
+    public String toDisplayString() {
+        return type.getIcon() + " [" + rank().name() + "] " + name()
+                + " | Lvl " + type.getLevelRequirement() + " | " + status.toDisplayString();
+    }
+
+    @Override
+    public String toString() {
+        return "SystemQuest{type=" + type + ", status=" + status + ", id=" + id + "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return id.equals(((SystemQuest) o).id);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(id); }
 }

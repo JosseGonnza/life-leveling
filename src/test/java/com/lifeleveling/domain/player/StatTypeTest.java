@@ -134,13 +134,13 @@ class StatTypeTest {
     class ExperienceCalculation {
         @ParameterizedTest(name = "Nivel {0} → {1} requiere {2} XP")
         @CsvSource({
-                "1,  2,    10",
-                "5,  6,    50",
-                "10, 11,  100",
-                "25, 26,  250",
-                "49, 50,  490",
-                "50, 51,  500",
-                "99, 100, 990"
+                "1,  2,    30",
+                "5,  6,    85",
+                "10, 11,  161",
+                "25, 26,  393",
+                "49, 50,  763",
+                "50, 51,  777",
+                "99, 100, 1533"
         })
         @DisplayName("getXPRequiredForNextLevel() calcula correctamente")
         void whenCalculatingXPForNextLevel_thenCorrectValue(int currentLevel, int nextLevel, int expectedXP) {
@@ -176,11 +176,11 @@ class StatTypeTest {
         @ParameterizedTest(name = "Nivel {0} requiere {1} XP total acumulada")
         @CsvSource({
                 "1,     0",
-                "2,   10",
-                "3,   30",
-                "10,  450",
-                "50,  12250",
-                "100, 49500"
+                "2,   30",
+                "3,   69",
+                "10,  770",
+                "50,  19250",
+                "100, 77000"
         })
         @DisplayName("getTotalXPForLevel() calcula XP acumulada correctamente")
         void whenCalculatingTotalXP_thenCorrectValue(int level, int expectedTotalXP) {
@@ -190,14 +190,14 @@ class StatTypeTest {
         }
 
         @Test
-        @DisplayName("getTotalXPForLevel() validación: Total para 5 stats = 247,500 XP")
-        void totalXPForAll5StatsIs2475000() {
+        @DisplayName("getTotalXPForLevel() validación: Total para 5 stats = 385,000 XP")
+        void totalXPForAll5StatsIs385000() {
             int totalForOneStat = StatType.getTotalXPForLevel(100);
 
             int totalForAll5Stats = totalForOneStat * 5;
 
-            assertEquals(49_500, totalForOneStat);
-            assertEquals(247_500, totalForAll5Stats);
+            assertEquals(77_000, totalForOneStat);
+            assertEquals(385_000, totalForAll5Stats);
         }
 
         @Test

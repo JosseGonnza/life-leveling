@@ -1,5 +1,6 @@
 package com.lifeleveling.domain.quest;
 
+import com.lifeleveling.domain.player.PlayerRank;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.shared.QuestReward;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
@@ -85,9 +86,9 @@ class SystemQuestTypeTest {
                     SystemQuestType.GATE_C_TO_B_PHASE_2.getPreviousGate());
 
             assertEquals(SystemQuestType.GATE_C_TO_B_PHASE_2,
-                    SystemQuestType.GATE_WEALTH.getPreviousGate());
+                    SystemQuestType.GATE_VAULT.getPreviousGate());
 
-            assertEquals(SystemQuestType.GATE_WEALTH,
+            assertEquals(SystemQuestType.GATE_VAULT,
                     SystemQuestType.GATE_B_TO_A.getPreviousGate());
 
             assertEquals(SystemQuestType.GATE_B_TO_A,
@@ -117,7 +118,7 @@ class SystemQuestTypeTest {
             assertEquals(25, SystemQuestType.GATE_D_TO_C.getLevelRequirement());
             assertEquals(35, SystemQuestType.GATE_C_TO_B_PHASE_1.getLevelRequirement());
             assertEquals(35, SystemQuestType.GATE_C_TO_B_PHASE_2.getLevelRequirement());
-            assertEquals(40, SystemQuestType.GATE_WEALTH.getLevelRequirement());
+            assertEquals(40, SystemQuestType.GATE_VAULT.getLevelRequirement());
             assertEquals(50, SystemQuestType.GATE_B_TO_A.getLevelRequirement());
             assertEquals(60, SystemQuestType.GATE_A_TO_S.getLevelRequirement());
             assertEquals(75, SystemQuestType.GATE_S_TO_S_PLUS.getLevelRequirement());
@@ -147,31 +148,31 @@ class SystemQuestTypeTest {
         @Test
         @DisplayName("GATE_E_TO_D desbloquea Rango D")
         void firstGate_unlocksRankD() {
-            assertEquals(QuestRank.D, SystemQuestType.GATE_E_TO_D.getRankUnlocked());
+            assertEquals(PlayerRank.D, SystemQuestType.GATE_E_TO_D.getRankUnlocked());
         }
 
         @Test
         @DisplayName("GATE_D_TO_C desbloquea Rango C")
         void secondGate_unlocksRankC() {
-            assertEquals(QuestRank.C, SystemQuestType.GATE_D_TO_C.getRankUnlocked());
+            assertEquals(PlayerRank.C, SystemQuestType.GATE_D_TO_C.getRankUnlocked());
         }
 
         @Test
         @DisplayName("GATE_C_TO_B_PHASE_2 desbloquea Rango B")
         void phase2Gate_unlocksRankB() {
-            assertEquals(QuestRank.B, SystemQuestType.GATE_C_TO_B_PHASE_2.getRankUnlocked());
+            assertEquals(PlayerRank.B, SystemQuestType.GATE_C_TO_B_PHASE_2.getRankUnlocked());
         }
 
         @Test
         @DisplayName("GATE_A_TO_S desbloquea Rango S (Legendario)")
         void bossGate_unlocksRankS() {
-            assertEquals(QuestRank.S, SystemQuestType.GATE_A_TO_S.getRankUnlocked());
+            assertEquals(PlayerRank.S, SystemQuestType.GATE_A_TO_S.getRankUnlocked());
         }
 
         @Test
         @DisplayName("GATE_ENDGAME desbloquea Rango S++")
         void endgameGate_unlocksRankSPlusPlus() {
-            assertEquals(QuestRank.S_PLUS_PLUS, SystemQuestType.GATE_ENDGAME.getRankUnlocked());
+            assertEquals(PlayerRank.S_PLUS_PLUS, SystemQuestType.GATE_ENDGAME.getRankUnlocked());
         }
     }
 

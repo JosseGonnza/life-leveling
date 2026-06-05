@@ -39,7 +39,8 @@ public enum QuestRank {
     }
 
     public static Optional<QuestRank> fromString(String name) {
-        if (name == null || name.isBlank()) return Optional.empty();
+        if (name == null || name.isBlank())
+            throw new IllegalArgumentException("El nombre del rango no puede ser null o vacío");
         try {
             return Optional.of(QuestRank.valueOf(name.trim().toUpperCase()));
         } catch (IllegalArgumentException e) {
@@ -75,6 +76,16 @@ public enum QuestRank {
         return moralDamage * 10;
     }
 
+    public int calculateFinalXP(HPState state) {
+        if (state == null) throw new IllegalArgumentException("El estado de HP no puede ser null");
+        return state.applyXPMultiplier(baseXP);
+    }
+
+    public int calculateFinalGold(HPState state) {
+        if (state == null) throw new IllegalArgumentException("El estado de HP no puede ser null");
+        return state.applyGoldMultiplier(baseGold);
+    }
+
     // Getters y Display
     public String toDisplayString() {
         String enumName = this.name().replace("_PLUS_PLUS", "++").replace("_PLUS", "+");
@@ -87,4 +98,8 @@ public enum QuestRank {
     public int getBaseGold() { return baseGold; }
     public int getMoralDamage() { return moralDamage; }
     public Optional<HPState> getMinHPState() { return Optional.ofNullable(minHPState); }
+
+    public String getEstimatedTime() { return estimatedTime; }
+    public boolean isBlockedDuringBurnout() { return ordinal() >= C.ordinal(); }
+    public boolean requiresHealthyState() { return minHPState == HPState.HEALTHY; }
 }

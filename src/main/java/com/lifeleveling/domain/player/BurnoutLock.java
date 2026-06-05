@@ -109,4 +109,10 @@ public record BurnoutLock(
                 getProgressPercentage(currentTime)
         );
     }
+
+    @Override
+    public String toString() {
+        return String.format("BurnoutLock[id=%s, triggered=%s, expires=%s, duration=%s]",
+                id, triggeredAt, expiresAt, Duration.between(triggeredAt, expiresAt));
+    }
 }

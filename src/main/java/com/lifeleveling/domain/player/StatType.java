@@ -93,9 +93,6 @@ public enum StatType {
      */
     public static int getXPRequiredForNextLevel(int currentLevel) {
         if (currentLevel < 1 || currentLevel >= 100) {
-            // En nivel 100 permitimos "llenar la barra" una última vez para efectos visuales (Bonus Mastery)
-            if (currentLevel == 100) return 5000;
-
             throw new IllegalArgumentException(
                     String.format("Nivel inválido: %d. Debe estar entre 1 y 100.", currentLevel)
             );

@@ -138,8 +138,8 @@ class ElderQuestTest {
             GateTracker tracker = mock(GateTracker.class);
             Player player = mock(Player.class);
 
-            // Simulamos éxito
-            when(tracker.getPerfectDayStreak()).thenReturn(20);
+            // Simulamos éxito: 20 Perfect Days en los últimos 30 días
+            when(tracker.getPerfectDaysCountInLastDays(30)).thenReturn(20);
 
             ConditionContext context = ConditionContext.create(player, null, tracker); // null gate pq es Elder
 

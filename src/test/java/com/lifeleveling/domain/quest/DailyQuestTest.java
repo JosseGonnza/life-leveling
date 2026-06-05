@@ -146,14 +146,12 @@ class DailyQuestTest {
         }
 
         @Test
-        @DisplayName("SLEEP con 6 horas se completa (Tier 1: +15 HP)")
-        void whenSleeping6Hours_thenCompletes() {
+        @DisplayName("SLEEP con 6 horas NO completa la quest (zona muerta: cura HP pero exige ≥7h)")
+        void whenSleeping6Hours_thenThrows() {
             DailyQuest quest = DailyQuest.create(DailyQuestType.SLEEP, LocalDate.now());
 
-            DailyQuest completed = quest.completeWithInput(6, Instant.now());
-
-            assertEquals(QuestStatus.COMPLETED, completed.status());
-            assertEquals(6, completed.getIntegerInput());
+            assertThrows(IllegalArgumentException.class,
+                    () -> quest.completeWithInput(6, Instant.now()));
         }
 
         @Test

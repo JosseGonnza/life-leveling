@@ -128,4 +128,51 @@ public class TitleInventory {
     public boolean isEquipped(TitleType type) { return equippedTitles.stream().anyMatch(t -> t.type() == type); }
     public Optional<Title> getTitle(TitleType type) { return unlockedTitles.stream().filter(t -> t.type() == type).findFirst(); }
     public List<Title> getEquippedTitles() { return Collections.unmodifiableList(equippedTitles); }
+
+    public int getUnlockedCount() { return unlockedTitles.size(); }
+    public int getEquippedCount() { return equippedTitles.size(); }
+
+    public int getAvailableSlots(int playerLevel) {
+        return playerLevel >= SECOND_SLOT_UNLOCK_LEVEL ? MAX_TITLE_SLOTS : 1;
+    }
+
+    public void unequipAll() { equippedTitles.clear(); }
+
+    public double getReadXPMultiplier() {
+        double multiplier = 1.0;
+        for (TitleBuff buff : getActiveBuffs()) {
+            if (buff.type() == TitleBuff.BuffType.READ_XP_MULTIPLIER) multiplier *= buff.getMultiplier();
+        }
+        return multiplier;
+    }
+
+    public Set<Title> getUnlockedTitles() { return Collections.unmodifiableSet(unlockedTitles); }
+
+    public List<Title> getTitlesByCategory(TitleCategory category) {
+        return unlockedTitles.stream().filter(t -> t.getCategory() == category).collect(Collectors.toList());
+    }
+
+    public List<TitleType> getLockedTitles() {
+        return Arrays.stream(TitleType.values()).filter(t -> !hasTitle(t)).collect(Collectors.toList());
+    }
+
+    public double getCollectionProgress() {
+        return (double) unlockedTitles.size() / TitleType.values().length;
+    }
+
+    public String getEquippedDisplay() {
+        if (equippedTitles.isEmpty()) return "Ningún título equipado";
+        return equippedTitles.stream().map(Title::getDisplayName).collect(Collectors.joining(" | "));
+    }
+
+    public String getActiveBuffsDisplay() {
+        List<TitleBuff> buffs = getActiveBuffs();
+        if (buffs.isEmpty()) return "Sin buffs activos";
+        return buffs.stream().map(TitleBuff::toDisplayString).collect(Collectors.joining(", "));
+    }
+
+    public String getCollectionSummary() {
+        return String.format("Títulos: %d/%d (%.0f%%)",
+                unlockedTitles.size(), TitleType.values().length, getCollectionProgress() * 100);
+    }
 }

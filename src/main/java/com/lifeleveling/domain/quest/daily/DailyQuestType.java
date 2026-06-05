@@ -102,6 +102,8 @@ public enum DailyQuestType {
     }
 
     public QuestReward calculateReward(boolean completed) {
+        if (isExternallyManaged()) return QuestReward.empty();
+        if (!requiresBooleanInput()) throw new IllegalStateException(this + " no usa input booleano");
         if (!completed) return QuestReward.empty();
         if (this == DIET) return QuestReward.ofGeneralXP(50);
         QuestReward.Builder builder = QuestReward.builder();
@@ -110,12 +112,17 @@ public enum DailyQuestType {
     }
 
     public boolean meetsCondition(int value) {
-        if (!requiresNumericInput()) return false;
+        if (!requiresNumericInput()) throw new IllegalStateException(this + " no usa input numérico");
         return switch (this) {
-            case SLEEP -> value >= 6;
+            case SLEEP -> value >= 7;
             case READ -> value >= 10;
             default -> false;
         };
+    }
+
+    public boolean meetsCondition(boolean completed) {
+        if (!requiresBooleanInput()) throw new IllegalStateException(this + " no usa input booleano");
+        return completed;
     }
 
     // ========================================================================================
@@ -137,8 +144,16 @@ public enum DailyQuestType {
     }
 
     // Getters básicos...
+    public String getIcon() { return icon; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public String toDisplayString() { return icon + " " + name; }
     public int getHpEffect() { return hpEffect; }
+
+    public InputType getInputType() { return inputType; }
+    public Map<StatType, Integer> getBaseStatXP() { return baseStatXP; }
+
+    public boolean grantsHP() { return this == SLEEP || hpEffect > 0; }
+    public boolean costsHP() { return hpEffect < 0; }
+    public boolean affectsHP() { return grantsHP() || costsHP(); }
 }

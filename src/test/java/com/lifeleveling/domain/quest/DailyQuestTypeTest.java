@@ -287,11 +287,11 @@ class DailyQuestTypeTest {
         }
 
         @Test
-        @DisplayName("SLEEP: meetsCondition >= 6 horas (según Biblia, Tier 1 de HP)")
-        void sleep_meetsConditionWhen6OrMore() {
+        @DisplayName("SLEEP: meetsCondition >= 7 horas (decisión C3: solo el descanso óptimo completa)")
+        void sleep_meetsConditionWhen7OrMore() {
             assertFalse(DailyQuestType.SLEEP.meetsCondition(5));
-            assertTrue(DailyQuestType.SLEEP.meetsCondition(6));  // Tier 1: +15 HP
-            assertTrue(DailyQuestType.SLEEP.meetsCondition(7));  // Tier 2: +30 HP
+            assertFalse(DailyQuestType.SLEEP.meetsCondition(6));  // zona muerta: cura +15 HP pero no completa
+            assertTrue(DailyQuestType.SLEEP.meetsCondition(7));   // +30 HP, completa
             assertTrue(DailyQuestType.SLEEP.meetsCondition(8));
             assertTrue(DailyQuestType.SLEEP.meetsCondition(10));
         }

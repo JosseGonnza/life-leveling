@@ -1,5 +1,6 @@
 package com.lifeleveling.domain.quest;
 
+import com.lifeleveling.domain.player.PlayerRank;
 import com.lifeleveling.domain.quest.shared.QuestId;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.shared.QuestReward;
@@ -294,7 +295,7 @@ class SystemQuestTest {
         @DisplayName("getRankUnlocked() retorna el rango correcto")
         void getRankUnlocked_returnsCorrectRank() {
             SystemQuest gateToS = SystemQuest.create(SystemQuestType.GATE_A_TO_S);
-            assertEquals(QuestRank.S, gateToS.getRankUnlocked());
+            assertEquals(PlayerRank.S, gateToS.getRankUnlocked());
         }
 
         @ParameterizedTest

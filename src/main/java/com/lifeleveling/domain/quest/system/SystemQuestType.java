@@ -128,4 +128,6 @@ public enum SystemQuestType {
     public PlayerRank getRankUnlocked() { return rankUnlocked; }
     public int getBaseXP() { return baseXP; }
     public int getBaseGold() { return baseGold; }
+
+    public String toDisplayString() { return icon + " " + name; }
 }

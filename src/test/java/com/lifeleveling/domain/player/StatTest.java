@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -125,68 +126,66 @@ class StatTest {
             assertEquals(hasMastery, stat.hasMastery());
         }
 
-        @ParameterizedTest(name = "Lvl {0}, XP {1}/{2}: canLevelUp = {3}")
-        @CsvSource({
-                "1,  5,   10, false",
-                "1,  10,  10, true",
-                "1,  15,  10, true",
-                "10, 100, 100, true",
-                "50, 499, 500, false",
-                "100, 0, 0, false"
-        })
-        @DisplayName("canLevelUp() verifica si puede subir de nivel")
-        void whenCheckingCanLevelUp_thenCorrectResult(int level, int currentXP, int xpNeeded, boolean canLevelUp) {
-            Stat stat = new Stat(StatType.STRENGTH, level, currentXP);
+        @ParameterizedTest(name = "Lvl {0}: canLevelUp según el umbral de la fórmula")
+        @ValueSource(ints = {1, 10, 50})
+        @DisplayName("canLevelUp() verifica el umbral de XP de la fórmula")
+        void whenCheckingCanLevelUp_thenCorrectResult(int level) {
+            int needed = StatType.getXPRequiredForNextLevel(level);
 
-            assertEquals(xpNeeded, stat.getXPRequiredForNextLevel());
-            assertEquals(canLevelUp, stat.canLevelUp());
+            assertEquals(needed, new Stat(StatType.STRENGTH, level, needed - 1).getXPRequiredForNextLevel());
+            assertFalse(new Stat(StatType.STRENGTH, level, needed - 1).canLevelUp());
+            assertTrue(new Stat(StatType.STRENGTH, level, needed).canLevelUp());
+            assertTrue(new Stat(StatType.STRENGTH, level, needed + 5).canLevelUp());
+        }
+
+        @Test
+        @DisplayName("canLevelUp() es false en nivel máximo")
+        void maxedStat_cannotLevelUp() {
+            assertFalse(Stat.maxed(StatType.STRENGTH).canLevelUp());
+            assertEquals(0, Stat.maxed(StatType.STRENGTH).getXPRequiredForNextLevel());
         }
     }
 
     @Nested
     class ExperienceCalculation {
-        @ParameterizedTest(name = "Nivel {0}: XP requerida = {1}")
-        @CsvSource({
-                "1,   10",
-                "5,   50",
-                "10,  100",
-                "50,  500",
-                "99,  990",
-                "100, 0"
-        })
-        @DisplayName("getXPRequiredForNextLevel() calcula correctamente")
-        void whenGettingXPRequired_thenCorrectAmount(int level, int expectedXP) {
-            Stat stat = Stat.atLevel(StatType.STRENGTH, level);
-            assertEquals(expectedXP, stat.getXPRequiredForNextLevel());
+        @ParameterizedTest(name = "Nivel {0}: XP requerida coincide con la fórmula")
+        @ValueSource(ints = {1, 5, 10, 50, 99})
+        @DisplayName("getXPRequiredForNextLevel() coincide con StatType (fórmula 7.7·N²)")
+        void whenGettingXPRequired_thenMatchesFormula(int level) {
+            assertEquals(StatType.getXPRequiredForNextLevel(level),
+                    Stat.atLevel(StatType.STRENGTH, level).getXPRequiredForNextLevel());
         }
 
-        @ParameterizedTest(name = "Lvl {0}, XP {1}/{2} = {3}%")
-        @CsvSource({
-                "1,  0,    10,   0.0",
-                "1,  5,    10,   50.0",
-                "1,  10,   10,   100.0",
-                "10, 50,   100,  50.0",
-                "50, 250,  500,  50.0",
-                "100, 0,   0,    100.0"
-        })
-        @DisplayName("getProgressPercentage() calcula porcentaje correcto")
-        void whenGettingProgress_thenCorrectPercentage(int level, int currentXP, int xpNeeded, double expectedProgress) {
-            Stat stat = new Stat(StatType.STRENGTH, level, currentXP);
-            assertEquals(expectedProgress, stat.getProgressPercentage(), 0.01);
+        @Test
+        @DisplayName("getXPRequiredForNextLevel() es 0 en nivel máximo")
+        void xpRequired_atMax_isZero() {
+            assertEquals(0, Stat.maxed(StatType.STRENGTH).getXPRequiredForNextLevel());
         }
 
-        @ParameterizedTest(name = "Lvl {0} (XP {1}): Total XP = {2}")
-        @CsvSource({
-                "1,  0,    0",
-                "2,  5,    15",
-                "3,  0,    30",
-                "10, 50,   500",
-                "100, 0,   49500"
-        })
-        @DisplayName("getTotalAccumulatedXP() suma XP gastada + XP actual")
-        void whenGettingTotalXP_thenIncludesSpentAndCurrent(int level, int currentXP, int expectedTotal) {
-            Stat stat = new Stat(StatType.STRENGTH, level, currentXP);
-            assertEquals(expectedTotal, stat.getTotalAccumulatedXP());
+        @ParameterizedTest(name = "Nivel {0}: progreso 0%, 50% y 100%")
+        @ValueSource(ints = {1, 10, 50})
+        @DisplayName("getProgressPercentage() calcula porcentaje sobre el umbral de la fórmula")
+        void whenGettingProgress_thenCorrectPercentage(int level) {
+            int needed = StatType.getXPRequiredForNextLevel(level);
+            assertEquals(0.0, new Stat(StatType.STRENGTH, level, 0).getProgressPercentage(), 0.01);
+            assertEquals(100.0, new Stat(StatType.STRENGTH, level, needed).getProgressPercentage(), 0.01);
+            int half = needed / 2;
+            assertEquals(half * 100.0 / needed, new Stat(StatType.STRENGTH, level, half).getProgressPercentage(), 0.01);
+        }
+
+        @ParameterizedTest(name = "Nivel {0}: Total XP = fórmula + XP actual")
+        @ValueSource(ints = {1, 2, 3, 10})
+        @DisplayName("getTotalAccumulatedXP() suma XP de niveles previos + XP actual")
+        void whenGettingTotalXP_thenIncludesSpentAndCurrent(int level) {
+            int current = 5;
+            int expected = StatType.getTotalXPForLevel(level) + current;
+            assertEquals(expected, new Stat(StatType.STRENGTH, level, current).getTotalAccumulatedXP());
+        }
+
+        @Test
+        @DisplayName("getTotalAccumulatedXP() en nivel máximo es 77.000")
+        void totalXP_atMax_is77000() {
+            assertEquals(77_000, Stat.maxed(StatType.STRENGTH).getTotalAccumulatedXP());
         }
     }
 
@@ -207,7 +206,7 @@ class StatTest {
         @DisplayName("addXP() con XP exacta sube 1 nivel")
         void whenAddingExactXP_thenLevelUpOnce() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            Stat result = stat.addXP(10); // Fórmula: nivel × 10 → 1 × 10 = 10
+            Stat result = stat.addXP(StatType.getXPRequiredForNextLevel(1));
 
             assertEquals(2, result.currentLevel());
             assertEquals(0, result.currentXP());
@@ -217,7 +216,7 @@ class StatTest {
         @DisplayName("addXP() con XP de sobra sube 1 nivel y guarda el resto")
         void whenAddingExcessXP_thenLevelUpAndSaveRemainder() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            Stat result = stat.addXP(15); // 10 para nivel 2, sobran 5
+            Stat result = stat.addXP(StatType.getXPRequiredForNextLevel(1) + 5); // lo justo para nivel 2, sobran 5
 
             assertEquals(2, result.currentLevel());
             assertEquals(5, result.currentXP());
@@ -227,8 +226,10 @@ class StatTest {
         @DisplayName("addXP() sube múltiples niveles si hay suficiente XP")
         void whenAddingMassiveXP_thenMultipleLevelUps() {
             Stat stat = Stat.initial(StatType.STRENGTH);
-            // 10 (1→2) + 20 (2→3) + 30 (3→4) = 60 XP para llegar a Lvl 4
-            Stat result = stat.addXP(65);  // Sube a Lvl 4 con 5 XP sobrantes
+            int toLevel4 = StatType.getXPRequiredForNextLevel(1)
+                    + StatType.getXPRequiredForNextLevel(2)
+                    + StatType.getXPRequiredForNextLevel(3);
+            Stat result = stat.addXP(toLevel4 + 5);  // Sube a Lvl 4 con 5 XP sobrantes
 
             assertEquals(4, result.currentLevel());
             assertEquals(5, result.currentXP());
@@ -332,7 +333,7 @@ class StatTest {
             assertTrue(display.contains("Fuerza"));
             assertTrue(display.contains("Lvl 23"));
             assertTrue(display.contains("145")); // XP actual
-            assertTrue(display.contains("230")); // XP requerida (23 × 10)
+            assertTrue(display.contains(String.valueOf(StatType.getXPRequiredForNextLevel(23)))); // XP requerida
             assertTrue(display.contains("%"));
         }
 
@@ -415,11 +416,12 @@ class StatTest {
         @Test
         @DisplayName("Operaciones encadenadas funcionan correctamente")
         void chainedOperations_workCorrectly() {
+            int toLevel4 = StatType.getXPRequiredForNextLevel(1)
+                    + StatType.getXPRequiredForNextLevel(2)
+                    + StatType.getXPRequiredForNextLevel(3);
             Stat result = Stat.initial(StatType.STRENGTH)
-                    .addXP(25) // Lvl 2, 15 XP (10 para subir, sobran 15)
-                    .addXP(15) // Lvl 3, 10 XP (20 para subir de 2→3: 15+15=30, 30-20=10)
-                    .addXP(30) // Lvl 4, 10 XP (30 para subir de 3→4: 10+30=40, 40-30=10)
-                    .forceLevel(1); // Lvl 5, 0 XP
+                    .addXP(toLevel4) // Lvl 4, 0 XP
+                    .forceLevel(1);  // Lvl 5, 0 XP
 
             assertEquals(5, result.currentLevel());
             assertEquals(0, result.currentXP());
@@ -430,8 +432,8 @@ class StatTest {
         void addingXPFromInitialToMaxed_works() {
             Stat stat = Stat.initial(StatType.STRENGTH);
 
-            // XP total para maxear: Suma de (n × 10) para n=1 a 99 = 49,500
-            stat = stat.addXP(49_500);
+            // XP total para maxear (fórmula 7.7·N²): 77.000
+            stat = stat.addXP(StatType.getTotalXPForLevel(100));
 
             assertTrue(stat.isMaxed());
             assertEquals(100, stat.currentLevel());

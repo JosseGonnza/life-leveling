@@ -216,19 +216,20 @@ class StatsTest {
         @DisplayName("getTotalAccumulatedXP() suma XP de todos los stats")
         void whenGettingTotalXP_thenSumsAllStats() {
             Stats stats = Stats.withLevels(2, 3, 4, 5, 6);
-            // Con multiplicador ×10: 10 + 30 + 60 + 100 + 150 = 350 XP
-            int expectedTotal = 10 + 30 + 60 + 100 + 150;
+            int expectedTotal = StatType.getTotalXPForLevel(2) + StatType.getTotalXPForLevel(3)
+                    + StatType.getTotalXPForLevel(4) + StatType.getTotalXPForLevel(5)
+                    + StatType.getTotalXPForLevel(6);
 
             assertEquals(expectedTotal, stats.getTotalAccumulatedXP());
         }
 
         @Test
-        @DisplayName("getTotalAccumulatedXP() para stats maxeados es 247,500")
-        void whenAllStatsMaxed_thenTotalXPIs2475000() {
+        @DisplayName("getTotalAccumulatedXP() para stats maxeados es 385.000")
+        void whenAllStatsMaxed_thenTotalXPIs385000() {
             Stats stats = Stats.maxed();
 
-            // 49,500 XP por stat × 5 stats = 247,500 XP
-            assertEquals(247_500, stats.getTotalAccumulatedXP());
+            // 77.000 XP por stat × 5 stats = 385.000 XP
+            assertEquals(385_000, stats.getTotalAccumulatedXP());
         }
 
         @Test
@@ -255,7 +256,7 @@ class StatsTest {
         @DisplayName("addXP() aumenta solo el stat especificado")
         void whenAddingXP_thenOnlyTargetStatIncreases(StatType type) {
             Stats stats = Stats.initial();
-            Stats updated = stats.addXP(type, 15); // Con ×10, 15 XP sube de 1→2 con 5 sobrantes
+            Stats updated = stats.addXP(type, StatType.getXPRequiredForNextLevel(1)); // sube de 1→2
 
             // Solo el stat objetivo debe cambiar
             assertEquals(2, updated.getLevel(type), "Stat objetivo debe subir");
@@ -273,7 +274,10 @@ class StatsTest {
         @DisplayName("addXP() es inmutable: no modifica el original")
         void whenAddingXP_thenOriginalUnchanged() {
             Stats original = Stats.initial();
-            Stats updated = original.addXP(StatType.STRENGTH, 60); // 10+20+30 = 60 para nivel 4
+            int toLevel4 = StatType.getXPRequiredForNextLevel(1)
+                    + StatType.getXPRequiredForNextLevel(2)
+                    + StatType.getXPRequiredForNextLevel(3);
+            Stats updated = original.addXP(StatType.STRENGTH, toLevel4);
 
             assertEquals(1, original.getLevel(StatType.STRENGTH), "Original no debe cambiar");
             assertEquals(4, updated.getLevel(StatType.STRENGTH), "Nuevo debe tener cambios");
@@ -285,9 +289,10 @@ class StatsTest {
         void whenAddingXP_thenLevelUpsAutomatically() {
             Stats stats = Stats.initial();
 
-            // Añadir 65 XP a Fuerza (sube hasta Lvl 4 con 5 sobrantes)
-            // 10 (1→2) + 20 (2→3) + 30 (3→4) = 60, sobran 5
-            stats = stats.addXP(StatType.STRENGTH, 65);
+            int toLevel4 = StatType.getXPRequiredForNextLevel(1)
+                    + StatType.getXPRequiredForNextLevel(2)
+                    + StatType.getXPRequiredForNextLevel(3);
+            stats = stats.addXP(StatType.STRENGTH, toLevel4 + 5); // hasta Lvl 4 con 5 sobrantes
 
             assertEquals(4, stats.getLevel(StatType.STRENGTH));
             assertEquals(5, stats.getCurrentXP(StatType.STRENGTH));
@@ -455,10 +460,12 @@ class StatsTest {
         @Test
         @DisplayName("Operaciones encadenadas funcionan correctamente")
         void chainedOperations_workCorrectly() {
+            int toL2 = StatType.getXPRequiredForNextLevel(1);
+            int toL4 = toL2 + StatType.getXPRequiredForNextLevel(2) + StatType.getXPRequiredForNextLevel(3);
             Stats result = Stats.initial()
-                    .addXP(StatType.STRENGTH, 25)   // 10 para 2, sobran 15 → lvl 2
-                    .addXP(StatType.INTELLECT, 60)  // 10+20+30=60 → lvl 4
-                    .addXP(StatType.WISDOM, 15)     // 10 para 2, sobran 5 → lvl 2
+                    .addXP(StatType.STRENGTH, toL2)   // → lvl 2
+                    .addXP(StatType.INTELLECT, toL4)  // → lvl 4
+                    .addXP(StatType.WISDOM, toL2)     // → lvl 2
                     .forceLevel(StatType.DISCIPLINE, 10);
 
             assertEquals(2, result.getLevel(StatType.STRENGTH));
