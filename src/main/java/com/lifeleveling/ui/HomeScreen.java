@@ -107,7 +107,7 @@ final class HomeScreen {
         cont.setOnAction(e -> nav.continueDay());
 
         HBox right = new HBox(10,
-                UiKit.navButton("Titles", () -> nav.todo("Titles")),
+                UiKit.navButton("Titles", nav::titles),
                 UiKit.navButton("Journal", () -> nav.todo("Journal")));
         Label gold = new Label("🪙 " + UiKit.num(p.gold()) + " G");
         gold.getStyleClass().add("gold");

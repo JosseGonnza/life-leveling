@@ -150,3 +150,17 @@
 .item-name { -fx-text-fill: white; -fx-font-size: 13; -fx-font-weight: bold; }
 .price { -fx-text-fill: GOLD_COLOR; -fx-font-family: "monospace"; -fx-font-size: 12; }
 .scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
+
+/* ---- Hall of Fame ---- */
+.title-chip {
+    -fx-background-color: PANEL_BG; -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 10; -fx-min-width: 150; -fx-max-width: 150; -fx-cursor: hand;
+}
+.title-chip-locked {
+    -fx-background-color: #0A1726; -fx-border-color: #2A3B4D; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 10; -fx-min-width: 150; -fx-max-width: 150; -fx-opacity: 0.55; -fx-cursor: hand;
+}
+.seal-card {
+    -fx-background-color: rgba(0,255,255,0.06); -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12;
+}
