@@ -1,8 +1,10 @@
 package com.lifeleveling.ui;
 
 import com.lifeleveling.application.GameFacade;
-import com.lifeleveling.infrastructure.persistence.InMemoryPlayerRepository;
+import com.lifeleveling.infrastructure.persistence.JsonPlayerRepository;
 import com.lifeleveling.infrastructure.time.SystemClock;
+
+import java.nio.file.Path;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
@@ -51,8 +53,7 @@ public final class LifeLevelingApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        var repo = new InMemoryPlayerRepository();
-        facade = new GameFacade(repo, new SystemClock(),
+        facade = new GameFacade(new JsonPlayerRepository(savePath()), new SystemClock(),
                 e -> System.out.println("⟦SYSTEM⟧ " + e.message()));
         if (!facade.loadGame()) {
             facade.newGame("Jose");
@@ -141,6 +142,13 @@ public final class LifeLevelingApp extends Application {
         facade.buy("consumable_bar");
         // Solo para capturas del Journal: cierra el día para que el timeline tenga una entrada.
         if (System.getenv("LL_SEED_CLOSEDAY") != null) facade.endDay();
+    }
+
+    /** Ruta del fichero de guardado (override con LL_SAVE; por defecto ~/.life-leveling/savegame.json). */
+    private static Path savePath() {
+        String override = System.getenv("LL_SAVE");
+        if (override != null) return Path.of(override);
+        return Path.of(System.getProperty("user.home"), ".life-leveling", "savegame.json");
     }
 
     public static void main(String[] args) {

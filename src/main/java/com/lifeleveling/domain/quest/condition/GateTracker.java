@@ -509,6 +509,13 @@ public class GateTracker {
 
     public double getTotalCareerEngineHours() { return currentTotalCareerHours; }
     public boolean isGateCompleted(SystemQuestType gateType) { return completedGates.contains(gateType); }
+    public Set<SystemQuestType> getCompletedGates() { return Set.copyOf(completedGates); }
+
+    /** Restaura las rachas de Perfect Day al cargar partida (persistencia). */
+    public void restorePerfectDayStreaks(int current, int max) {
+        this.currentPerfectDayStreak = current;
+        this.maxPerfectDayStreak = max;
+    }
 
     public boolean hasManualConfirmation(String id) { return manualConfirmations.contains(id); }
     public void setManualConfirmation(String id, boolean v) {

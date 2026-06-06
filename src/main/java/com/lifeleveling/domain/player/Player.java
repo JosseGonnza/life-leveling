@@ -696,4 +696,5 @@ public class Player {
     public UUID getId() { return id; }
     public String getName() { return name; }
     public TemporaryBuffTracker getTempBuffTracker() { return tempBuffTracker; }
+    public BurnoutLock getActiveBurnoutLock() { return activeBurnoutLock; }
 }
