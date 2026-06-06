@@ -26,14 +26,22 @@ import java.io.File;
 import javax.imageio.ImageIO;
 
 /**
- * Punto de entrada de la cara JavaFX. Ventana sin marco (estética Sistema), monta la Home
- * leyendo del GameFacade. Estado en memoria + seed de demo para no salir en blanco.
+ * Punto de entrada de la cara JavaFX. Monta el marco una vez (barra de título + navegación)
+ * e intercambia el centro según la pantalla. Estado en memoria + seed de demo.
  */
 public final class LifeLevelingApp extends Application {
 
     private GameFacade facade;
     private Stage stage;
+    private BorderPane shell;
     private double xOffset, yOffset;
+
+    private final Nav nav = new Nav() {
+        @Override public void home() { shell.setCenter(HomeScreen.build(facade, this)); }
+        @Override public void daily() { shell.setCenter(DailyTasksScreen.build(facade, this)); }
+        @Override public void continueDay() { facade.endDay(); home(); }
+        @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
+    };
 
     @Override
     public void start(Stage stage) {
@@ -45,11 +53,40 @@ public final class LifeLevelingApp extends Application {
             facade.newGame("Jose");
             seedDemo();
         }
+
+        shell = new BorderPane();
+        shell.getStyleClass().add("app-root");
+        shell.setTop(titleBar());
+        nav.home();
+        if ("daily".equals(System.getenv("LL_SCREEN"))) nav.daily(); // hook de dev para capturas
+
+        Scene scene = new Scene(shell, 940, 580);
+        scene.setFill(Color.web("#050A14"));
+        scene.getStylesheets().add(
+                getClass().getResource("/com/lifeleveling/ui/system.css").toExternalForm());
+
         stage.initStyle(StageStyle.UNDECORATED);
         stage.setTitle("Life Leveling");
-        render();
+        stage.setScene(scene);
         stage.show();
         maybeScreenshot();
+    }
+
+    private Region titleBar() {
+        Label title = new Label("⟦ LIFE LEVELING · SYSTEM ⟧");
+        title.getStyleClass().add("sys-title");
+        Button close = new Button("✕");
+        close.getStyleClass().add("close-btn");
+        close.setOnAction(e -> stage.close());
+
+        HBox bar = new HBox(title, UiKit.hgrow(), close);
+        bar.getStyleClass().add("title-bar");
+        bar.setOnMousePressed(e -> { xOffset = e.getSceneX(); yOffset = e.getSceneY(); });
+        bar.setOnMouseDragged(e -> {
+            stage.setX(e.getScreenX() - xOffset);
+            stage.setY(e.getScreenY() - yOffset);
+        });
+        return bar;
     }
 
     /** Hook de dev: si LL_SCREENSHOT=ruta, guarda un PNG de la escena y cierra. No afecta al uso normal. */
@@ -75,44 +112,7 @@ public final class LifeLevelingApp extends Application {
         pause.play();
     }
 
-    private void render() {
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("app-root");
-        root.setTop(titleBar());
-        root.setCenter(HomeScreen.build(facade, this::onContinue));
-
-        Scene scene = new Scene(root, 940, 580);
-        scene.setFill(Color.web("#050A14"));
-        scene.getStylesheets().add(
-                getClass().getResource("/com/lifeleveling/ui/system.css").toExternalForm());
-        stage.setScene(scene);
-    }
-
-    private void onContinue() {
-        facade.endDay();
-        render();
-    }
-
-    private Region titleBar() {
-        Label title = new Label("⟦ LIFE LEVELING · SYSTEM ⟧");
-        title.getStyleClass().add("sys-title");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        Button close = new Button("✕");
-        close.getStyleClass().add("close-btn");
-        close.setOnAction(e -> stage.close());
-
-        HBox bar = new HBox(title, spacer, close);
-        bar.getStyleClass().add("title-bar");
-        bar.setOnMousePressed(e -> { xOffset = e.getSceneX(); yOffset = e.getSceneY(); });
-        bar.setOnMouseDragged(e -> {
-            stage.setX(e.getScreenX() - xOffset);
-            stage.setY(e.getScreenY() - yOffset);
-        });
-        return bar;
-    }
-
-    /** Estado de muestra para ver la Home poblada. Borra este método cuando haya partida real. */
+    /** Estado de muestra para ver las pantallas pobladas. Borra este método cuando haya partida real. */
     private void seedDemo() {
         facade.workJob(8);
         facade.workCode(4);
