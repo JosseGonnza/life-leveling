@@ -29,7 +29,7 @@ import javax.imageio.ImageIO;
 
 /**
  * Punto de entrada de la cara JavaFX. Monta el marco una vez (barra de título + navegación)
- * e intercambia el centro según la pantalla. Estado en memoria + seed de demo.
+ * e intercambia el centro según la pantalla. Estado persistido en JSON entre sesiones.
  */
 public final class LifeLevelingApp extends Application {
 
@@ -57,22 +57,12 @@ public final class LifeLevelingApp extends Application {
                 e -> System.out.println("⟦SYSTEM⟧ " + e.message()));
         if (!facade.loadGame()) {
             facade.newGame("Jose");
-            seedDemo();
         }
 
         shell = new BorderPane();
         shell.getStyleClass().add("app-root");
         shell.setTop(titleBar());
         nav.home();
-        switch (System.getenv("LL_SCREEN") == null ? "" : System.getenv("LL_SCREEN")) { // hook de dev para capturas
-            case "daily" -> nav.daily();
-            case "quests" -> nav.quests();
-            case "gates" -> nav.gates();
-            case "armory" -> nav.armory();
-            case "titles" -> nav.titles();
-            case "journal" -> nav.journal();
-            default -> { }
-        }
 
         Scene scene = new Scene(shell, 940, 580);
         scene.setFill(Color.web("#050A14"));
@@ -124,24 +114,6 @@ public final class LifeLevelingApp extends Application {
             Platform.exit();
         });
         pause.play();
-    }
-
-    /** Estado de muestra para ver las pantallas pobladas. Borra este método cuando haya partida real. */
-    private void seedDemo() {
-        facade.workJob(16);
-        facade.workCode(4);
-        facade.read(40);
-        facade.sleep(8);
-        facade.gym(true);
-        facade.skincare(true);
-        facade.createQuest("Code Review: Proyecto Z", "Revisar el PR del equipo antes del viernes.",
-                com.lifeleveling.domain.quest.shared.QuestRank.B, java.time.LocalDate.now().plusDays(3));
-        facade.createQuest("Aprender JavaFX", "Pintar 3 pantallas del Sistema.",
-                com.lifeleveling.domain.quest.shared.QuestRank.C, null);
-        facade.buy("consumable_espresso");
-        facade.buy("consumable_bar");
-        // Solo para capturas del Journal: cierra el día para que el timeline tenga una entrada.
-        if (System.getenv("LL_SEED_CLOSEDAY") != null) facade.endDay();
     }
 
     /** Ruta del fichero de guardado (override con LL_SAVE; por defecto ~/.life-leveling/savegame.json). */
