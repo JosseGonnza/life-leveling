@@ -97,7 +97,7 @@ final class HomeScreen {
     private static Region bottomBar(PlayerView p, Nav nav) {
         HBox left = new HBox(10,
                 UiKit.navButton("Daily", nav::daily),
-                UiKit.navButton("Quests", () -> nav.todo("Quests")),
+                UiKit.navButton("Quests", nav::quests),
                 UiKit.navButton("Inventory", () -> nav.todo("Inventory")));
         left.setAlignment(Pos.CENTER_LEFT);
 

@@ -7,6 +7,7 @@ package com.lifeleveling.ui;
 interface Nav {
     void home();
     void daily();
+    void quests();
     void continueDay();
     /** Pantallas aún no implementadas: feedback temporal. */
     void todo(String screenName);

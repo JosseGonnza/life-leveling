@@ -39,6 +39,7 @@ public final class LifeLevelingApp extends Application {
     private final Nav nav = new Nav() {
         @Override public void home() { shell.setCenter(HomeScreen.build(facade, this)); }
         @Override public void daily() { shell.setCenter(DailyTasksScreen.build(facade, this)); }
+        @Override public void quests() { shell.setCenter(QuestsScreen.build(facade, this)); }
         @Override public void continueDay() { facade.endDay(); home(); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
@@ -58,7 +59,11 @@ public final class LifeLevelingApp extends Application {
         shell.getStyleClass().add("app-root");
         shell.setTop(titleBar());
         nav.home();
-        if ("daily".equals(System.getenv("LL_SCREEN"))) nav.daily(); // hook de dev para capturas
+        switch (System.getenv("LL_SCREEN") == null ? "" : System.getenv("LL_SCREEN")) { // hook de dev para capturas
+            case "daily" -> nav.daily();
+            case "quests" -> nav.quests();
+            default -> { }
+        }
 
         Scene scene = new Scene(shell, 940, 580);
         scene.setFill(Color.web("#050A14"));
@@ -120,6 +125,10 @@ public final class LifeLevelingApp extends Application {
         facade.sleep(8);
         facade.gym(true);
         facade.skincare(true);
+        facade.createQuest("Code Review: Proyecto Z", "Revisar el PR del equipo antes del viernes.",
+                com.lifeleveling.domain.quest.shared.QuestRank.B, java.time.LocalDate.now().plusDays(3));
+        facade.createQuest("Aprender JavaFX", "Pintar 3 pantallas del Sistema.",
+                com.lifeleveling.domain.quest.shared.QuestRank.C, null);
     }
 
     public static void main(String[] args) {
