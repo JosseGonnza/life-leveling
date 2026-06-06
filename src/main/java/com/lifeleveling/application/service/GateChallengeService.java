@@ -26,6 +26,10 @@ public final class GateChallengeService {
         return gateService.verifyGate(player, gate);
     }
 
+    public boolean hasAppeared(Player player, SystemQuestType gate) {
+        return gateService.hasAppeared(player, gate);
+    }
+
     public GateVerificationResult challengeOf(Player player, SystemQuestType gate) {
         return gateService.attemptGate(player, gate);
     }

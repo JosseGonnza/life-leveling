@@ -15,6 +15,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.util.List;
+
 /**
  * Pantalla Gates (mockup 6.gates2): la gate de ascenso actual con sus requisitos y el botón
  * de desafío, más las especiales (Vault/Redemption) como tarjetas bloqueadas/disponibles.
@@ -28,14 +30,24 @@ final class GatesScreen {
 
         Region mainCard = currentGateCard(status, level, facade, nav);
 
-        VBox specials = new VBox(14,
-                specialCard("💰 THE VAULT", facade.vaultStatus(), () -> { facade.challengeVault(); nav.gates(); }),
-                specialCard("💀 REDEMPTION", facade.redemptionStatus(), () -> { facade.challengeRedemption(); nav.gates(); }));
-        specials.setPrefWidth(290);
-
-        HBox middle = new HBox(20, mainCard, specials);
+        HBox middle = new HBox(20, mainCard);
         HBox.setHgrow(mainCard, Priority.ALWAYS);
         VBox.setVgrow(middle, Priority.ALWAYS);
+
+        // Las especiales solo se muestran si se han manifestado (Vault@40, Redemption tras caer).
+        List<GateVerificationResult> specialGates = facade.availableSpecialGates();
+        if (!specialGates.isEmpty()) {
+            VBox specials = new VBox(14);
+            specials.setPrefWidth(290);
+            for (GateVerificationResult sg : specialGates) {
+                SystemQuestType g = sg.gate();
+                Runnable onChallenge = g == SystemQuestType.GATE_VAULT
+                        ? () -> { facade.challengeVault(); nav.gates(); }
+                        : () -> { facade.challengeRedemption(); nav.gates(); };
+                specials.getChildren().add(specialCard(g.getIcon() + " " + g.getName(), sg, onChallenge));
+            }
+            middle.getChildren().add(specials);
+        }
 
         Label title = new Label("GATES — EL SISTEMA");
         title.getStyleClass().add("screen-title");

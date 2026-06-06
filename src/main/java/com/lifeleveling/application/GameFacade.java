@@ -19,6 +19,7 @@ import com.lifeleveling.domain.quest.system.SystemQuestType;
 import com.lifeleveling.domain.quest.user.UserQuest;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -156,6 +157,17 @@ public final class GameFacade {
 
     public GateVerificationResult gateStatus() {
         return gates.status(game());
+    }
+
+    /** Gates especiales que se han manifestado y aún no se han superado (las únicas que la UI debe mostrar). */
+    public List<GateVerificationResult> availableSpecialGates() {
+        List<GateVerificationResult> out = new ArrayList<>();
+        for (SystemQuestType special : List.of(SystemQuestType.GATE_VAULT, SystemQuestType.GATE_REDEMPTION)) {
+            if (gates.hasAppeared(game(), special) && !game().getGateTracker().isGateCompleted(special)) {
+                out.add(gates.statusOf(game(), special));
+            }
+        }
+        return out;
     }
 
     public GateVerificationResult challengeGate() {

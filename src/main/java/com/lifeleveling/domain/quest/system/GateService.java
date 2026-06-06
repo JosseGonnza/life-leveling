@@ -38,6 +38,12 @@ public class GateService {
     public GateVerificationResult verifyGate(Player player, SystemQuestType gate) {
         GateTracker tracker = player.getGateTracker();
 
+        // Las especiales no existen para el jugador hasta que se manifiestan (Vault@nivel 40,
+        // Redemption tras caer). No se pueden ni ver ni desafiar antes.
+        if (gate.isSpecialGate() && !hasAppeared(player, gate)) {
+            return new GateVerificationResult(false, gate, List.of(), "Esta Gate aún no se ha manifestado.");
+        }
+
         ConditionContext context = ConditionContext.create(player, null, tracker);
 
         List<GateCondition> failedConditions = new ArrayList<>();
@@ -79,6 +85,11 @@ public class GateService {
      * Intenta completar una Gate concreta (incluye las especiales Vault/Redemption).
      */
     public GateVerificationResult attemptGate(Player player, SystemQuestType gate) {
+        // 0. Una Gate ya superada no se vuelve a reclamar (evita repetir recompensa).
+        if (player.getGateTracker().isGateCompleted(gate)) {
+            return new GateVerificationResult(false, gate, List.of(), "Esta Gate ya ha sido superada.");
+        }
+
         // 1. Verificar requisitos
         GateVerificationResult verification = verifyGate(player, gate);
 
@@ -101,6 +112,21 @@ public class GateService {
         }
 
         return verification;
+    }
+
+    private static final int REDEMPTION_BURNOUTS = 3;
+
+    /**
+     * ¿Se ha manifestado esta Gate para el jugador? Las lineales aparecen por la cadena de rango;
+     * las especiales solo cuando se activa su disparador: The Vault al alcanzar el nivel 40,
+     * Redemption tras caer en desgracia (3 burnouts en el último mes).
+     */
+    public boolean hasAppeared(Player player, SystemQuestType gate) {
+        return switch (gate) {
+            case GATE_VAULT -> player.getLevel() >= SystemQuestType.GATE_VAULT.getLevelRequirement();
+            case GATE_REDEMPTION -> player.getGateTracker().getBurnoutsInLastMonth() >= REDEMPTION_BURNOUTS;
+            default -> true;
+        };
     }
 
     /**

@@ -9,6 +9,7 @@ import com.lifeleveling.domain.quest.system.GateVerificationResult;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,8 +23,6 @@ import java.util.Set;
  * al recargar partida se re-avisa una vez de las pendientes (recordatorio deseable). [M5: persistir si molesta]
  */
 public final class DayService {
-
-    private static final int REDEMPTION_BURNOUTS_THRESHOLD = 3;
 
     private final Clock clock;
     private final GateService gateService = new GateService();
@@ -50,16 +49,11 @@ public final class DayService {
             announce(player, nextGate);
         }
 
-        // The Vault: aparece a nivel 40.
-        if (level >= SystemQuestType.GATE_VAULT.getLevelRequirement()
-                && !tracker.isGateCompleted(SystemQuestType.GATE_VAULT)) {
-            announce(player, SystemQuestType.GATE_VAULT);
-        }
-
-        // Redemption: aparece tras caer en desgracia (3 burnouts en el último mes).
-        if (tracker.getBurnoutsInLastMonth() >= REDEMPTION_BURNOUTS_THRESHOLD
-                && !tracker.isGateCompleted(SystemQuestType.GATE_REDEMPTION)) {
-            announce(player, SystemQuestType.GATE_REDEMPTION);
+        // Gates especiales: avisan cuando se manifiestan (Vault@40, Redemption tras caer).
+        for (SystemQuestType special : List.of(SystemQuestType.GATE_VAULT, SystemQuestType.GATE_REDEMPTION)) {
+            if (gateService.hasAppeared(player, special) && !tracker.isGateCompleted(special)) {
+                announce(player, special);
+            }
         }
     }
 
