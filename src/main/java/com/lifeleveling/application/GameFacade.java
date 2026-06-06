@@ -2,6 +2,7 @@ package com.lifeleveling.application;
 
 import com.lifeleveling.application.dto.DailyChecklistView;
 import com.lifeleveling.application.dto.InventoryView;
+import com.lifeleveling.application.dto.JournalView;
 import com.lifeleveling.application.dto.PlayerView;
 import com.lifeleveling.application.dto.QuestView;
 import com.lifeleveling.application.dto.ShopItemView;
@@ -234,6 +235,10 @@ public final class GameFacade {
 
     public TitlesView titles() {
         return TitlesView.from(game().getTitleInventory(), game().getLevel());
+    }
+
+    public JournalView journal() {
+        return JournalView.from(game(), 30);
     }
 
     public PlayerView equipTitle(String titleType) {

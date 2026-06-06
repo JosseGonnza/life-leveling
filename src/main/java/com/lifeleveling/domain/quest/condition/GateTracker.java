@@ -211,6 +211,14 @@ public class GateTracker {
     // QUERIES HISTÓRICAS BÁSICAS
     // ========================================================================================
 
+    /** Días cerrados de los últimos {@code days}, del más reciente al más antiguo (para el Journal). */
+    public List<DailyHistory> getRecentDays(int days) {
+        LocalDate startDate = LocalDate.now().minusDays(days);
+        List<DailyHistory> recent = new ArrayList<>(history.tailMap(startDate).values());
+        Collections.reverse(recent);
+        return recent;
+    }
+
     public int getMinHPInLastDays(int days) {
         LocalDate startDate = LocalDate.now().minusDays(days);
         return history.tailMap(startDate).values().stream()

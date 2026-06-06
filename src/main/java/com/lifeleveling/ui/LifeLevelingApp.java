@@ -43,6 +43,7 @@ public final class LifeLevelingApp extends Application {
         @Override public void gates() { shell.setCenter(GatesScreen.build(facade, this)); }
         @Override public void armory() { shell.setCenter(ArmoryScreen.build(facade, this)); }
         @Override public void titles() { shell.setCenter(HallOfFameScreen.build(facade, this)); }
+        @Override public void journal() { shell.setCenter(JournalScreen.build(facade, this)); }
         @Override public void continueDay() { facade.endDay(); home(); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
@@ -68,6 +69,7 @@ public final class LifeLevelingApp extends Application {
             case "gates" -> nav.gates();
             case "armory" -> nav.armory();
             case "titles" -> nav.titles();
+            case "journal" -> nav.journal();
             default -> { }
         }
 
@@ -137,6 +139,8 @@ public final class LifeLevelingApp extends Application {
                 com.lifeleveling.domain.quest.shared.QuestRank.C, null);
         facade.buy("consumable_espresso");
         facade.buy("consumable_bar");
+        // Solo para capturas del Journal: cierra el día para que el timeline tenga una entrada.
+        if (System.getenv("LL_SEED_CLOSEDAY") != null) facade.endDay();
     }
 
     public static void main(String[] args) {

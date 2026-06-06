@@ -108,7 +108,7 @@ final class HomeScreen {
 
         HBox right = new HBox(10,
                 UiKit.navButton("Titles", nav::titles),
-                UiKit.navButton("Journal", () -> nav.todo("Journal")));
+                UiKit.navButton("Journal", nav::journal));
         Label gold = new Label("🪙 " + UiKit.num(p.gold()) + " G");
         gold.getStyleClass().add("gold");
 
