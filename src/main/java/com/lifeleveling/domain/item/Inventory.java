@@ -51,6 +51,9 @@ public class Inventory {
     public void unequip(ItemSlot slot) { equippedItems.remove(slot); }
     public Optional<Item> getEquippedItem(ItemSlot slot) { return Optional.ofNullable(equippedItems.get(slot)); }
 
+    public List<Item> getOwnedItems() { return List.copyOf(ownedItems); }
+    public Map<ItemSlot, Item> getEquippedItems() { return Map.copyOf(equippedItems); }
+
     // ========================================================================================
     // CÁLCULO DE STATS & EFECTOS ESPECIALES
     // ========================================================================================

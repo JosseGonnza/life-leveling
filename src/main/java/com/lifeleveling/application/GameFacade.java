@@ -1,8 +1,13 @@
 package com.lifeleveling.application;
 
 import com.lifeleveling.application.dto.DailyChecklistView;
+import com.lifeleveling.application.dto.InventoryView;
 import com.lifeleveling.application.dto.PlayerView;
 import com.lifeleveling.application.dto.QuestView;
+import com.lifeleveling.application.dto.ShopItemView;
+import com.lifeleveling.application.dto.TitlesView;
+import com.lifeleveling.domain.item.ItemCatalog;
+import com.lifeleveling.domain.title.TitleType;
 import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.application.port.Notifier;
 import com.lifeleveling.application.port.PlayerRepository;
@@ -214,6 +219,36 @@ public final class GameFacade {
 
     public DailyChecklistView dailyChecklist() {
         return DailyChecklistView.from(game());
+    }
+
+    public List<ShopItemView> shopCatalog() {
+        int gold = game().getCurrentGold();
+        return ItemCatalog.getShopInventory().stream()
+                .map(item -> ShopItemView.from(item, gold))
+                .toList();
+    }
+
+    public InventoryView inventory() {
+        return InventoryView.from(game().getInventory());
+    }
+
+    public TitlesView titles() {
+        return TitlesView.from(game().getTitleInventory(), game().getLevel());
+    }
+
+    public PlayerView equipTitle(String titleType) {
+        game().equipTitle(TitleType.valueOf(titleType));
+        return persistAndView();
+    }
+
+    public PlayerView unequipTitle(String titleType) {
+        game().unequipTitle(TitleType.valueOf(titleType));
+        return persistAndView();
+    }
+
+    public PlayerView swapTitle(String oldType, String newType) {
+        game().swapTitle(TitleType.valueOf(oldType), TitleType.valueOf(newType));
+        return persistAndView();
     }
 
     // ----- Internos -----
