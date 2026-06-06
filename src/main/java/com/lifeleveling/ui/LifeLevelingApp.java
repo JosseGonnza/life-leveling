@@ -40,6 +40,7 @@ public final class LifeLevelingApp extends Application {
         @Override public void home() { shell.setCenter(HomeScreen.build(facade, this)); }
         @Override public void daily() { shell.setCenter(DailyTasksScreen.build(facade, this)); }
         @Override public void quests() { shell.setCenter(QuestsScreen.build(facade, this)); }
+        @Override public void gates() { shell.setCenter(GatesScreen.build(facade, this)); }
         @Override public void continueDay() { facade.endDay(); home(); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
@@ -62,6 +63,7 @@ public final class LifeLevelingApp extends Application {
         switch (System.getenv("LL_SCREEN") == null ? "" : System.getenv("LL_SCREEN")) { // hook de dev para capturas
             case "daily" -> nav.daily();
             case "quests" -> nav.quests();
+            case "gates" -> nav.gates();
             default -> { }
         }
 

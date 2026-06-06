@@ -8,6 +8,7 @@ interface Nav {
     void home();
     void daily();
     void quests();
+    void gates();
     void continueDay();
     /** Pantallas aún no implementadas: feedback temporal. */
     void todo(String screenName);

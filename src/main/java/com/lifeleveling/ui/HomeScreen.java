@@ -98,6 +98,7 @@ final class HomeScreen {
         HBox left = new HBox(10,
                 UiKit.navButton("Daily", nav::daily),
                 UiKit.navButton("Quests", nav::quests),
+                UiKit.navButton("Gates", nav::gates),
                 UiKit.navButton("Inventory", () -> nav.todo("Inventory")));
         left.setAlignment(Pos.CENTER_LEFT);
 
