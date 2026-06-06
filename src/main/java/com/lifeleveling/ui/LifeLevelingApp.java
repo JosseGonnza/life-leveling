@@ -41,6 +41,7 @@ public final class LifeLevelingApp extends Application {
         @Override public void daily() { shell.setCenter(DailyTasksScreen.build(facade, this)); }
         @Override public void quests() { shell.setCenter(QuestsScreen.build(facade, this)); }
         @Override public void gates() { shell.setCenter(GatesScreen.build(facade, this)); }
+        @Override public void armory() { shell.setCenter(ArmoryScreen.build(facade, this)); }
         @Override public void continueDay() { facade.endDay(); home(); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
@@ -64,6 +65,7 @@ public final class LifeLevelingApp extends Application {
             case "daily" -> nav.daily();
             case "quests" -> nav.quests();
             case "gates" -> nav.gates();
+            case "armory" -> nav.armory();
             default -> { }
         }
 
@@ -121,7 +123,7 @@ public final class LifeLevelingApp extends Application {
 
     /** Estado de muestra para ver las pantallas pobladas. Borra este método cuando haya partida real. */
     private void seedDemo() {
-        facade.workJob(8);
+        facade.workJob(16);
         facade.workCode(4);
         facade.read(40);
         facade.sleep(8);
@@ -131,6 +133,8 @@ public final class LifeLevelingApp extends Application {
                 com.lifeleveling.domain.quest.shared.QuestRank.B, java.time.LocalDate.now().plusDays(3));
         facade.createQuest("Aprender JavaFX", "Pintar 3 pantallas del Sistema.",
                 com.lifeleveling.domain.quest.shared.QuestRank.C, null);
+        facade.buy("consumable_espresso");
+        facade.buy("consumable_bar");
     }
 
     public static void main(String[] args) {

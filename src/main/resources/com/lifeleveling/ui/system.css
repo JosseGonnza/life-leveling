@@ -132,3 +132,21 @@
 }
 .continue-btn:hover { -fx-background-color: rgba(0,255,255,0.18); }
 .gold { -fx-text-fill: GOLD_COLOR; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-padding: 0 4 0 10; }
+
+/* ---- The Armory ---- */
+.shop-card {
+    -fx-background-color: PANEL_BG; -fx-border-color: PANEL_BORDER; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12; -fx-min-width: 190; -fx-max-width: 190;
+}
+.shop-card-locked {
+    -fx-background-color: rgba(40,12,18,0.35); -fx-border-color: #5A2230; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12; -fx-min-width: 190; -fx-max-width: 190; -fx-opacity: 0.7;
+}
+.slot-chip {
+    -fx-background-color: #0A1726; -fx-border-color: FIELD_BORDER; -fx-border-width: 1;
+    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 8; -fx-alignment: center; -fx-min-width: 92;
+}
+.slot-chip-filled { -fx-border-color: SYSTEM_BLUE; }
+.item-name { -fx-text-fill: white; -fx-font-size: 13; -fx-font-weight: bold; }
+.price { -fx-text-fill: GOLD_COLOR; -fx-font-family: "monospace"; -fx-font-size: 12; }
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; -fx-background: transparent; }

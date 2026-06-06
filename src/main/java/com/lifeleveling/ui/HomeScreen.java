@@ -99,7 +99,7 @@ final class HomeScreen {
                 UiKit.navButton("Daily", nav::daily),
                 UiKit.navButton("Quests", nav::quests),
                 UiKit.navButton("Gates", nav::gates),
-                UiKit.navButton("Inventory", () -> nav.todo("Inventory")));
+                UiKit.navButton("Armory", nav::armory));
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button cont = new Button("CONTINUE  ▸");

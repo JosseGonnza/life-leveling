@@ -14,14 +14,14 @@ public record InventoryView(
         List<OwnedItemView> owned,
         List<SlotView> loadout
 ) {
-    public record OwnedItemView(String id, String name, String category, boolean consumable, boolean onCooldown) {}
+    public record OwnedItemView(String id, String name, String category, boolean consumable, boolean equippable, boolean onCooldown) {}
 
     public record SlotView(String slot, String icon, String itemName, boolean filled) {}
 
     public static InventoryView from(Inventory inv) {
         List<OwnedItemView> owned = inv.getOwnedItems().stream()
                 .map(i -> new OwnedItemView(i.id(), i.name(), i.category().name(),
-                        i.isConsumable(), inv.isCooldownActive(i.id())))
+                        i.isConsumable(), i.slot() != ItemSlot.NONE, inv.isCooldownActive(i.id())))
                 .toList();
 
         List<SlotView> loadout = new ArrayList<>();
