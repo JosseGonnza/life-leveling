@@ -5,6 +5,7 @@ import com.lifeleveling.domain.player.StatType;
 import com.lifeleveling.domain.quest.condition.CareerHoursInPeriod;
 import com.lifeleveling.domain.quest.condition.FinancialDiscipline;
 import com.lifeleveling.domain.quest.condition.GateCondition;
+import com.lifeleveling.domain.quest.condition.BurnoutTrigger;
 import com.lifeleveling.domain.quest.condition.HPThreshold;
 import com.lifeleveling.domain.quest.condition.LevelRequirement;
 import com.lifeleveling.domain.quest.condition.ManualConfirmation;
@@ -78,7 +79,9 @@ public enum SystemQuestType {
             "💀", "Salir del Abismo",
             "Mantener HP > 80 durante 14 días tras caer en desgracia.",
             0, null, null, 1_000, 0, null,
-            List.of(new HPThreshold(80, 14))
+            // "Caer en desgracia" (3 burnouts/mes) es precondición de aparición; sin ella un jugador
+            // sano cumpliría el HP>80 vacuamente y reclamaría la recompensa (bug 6-jun).
+            List.of(new BurnoutTrigger(3), new HPThreshold(80, 14))
     );
 
     private final String icon;
