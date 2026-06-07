@@ -67,9 +67,10 @@ final class JournalScreen {
     }
 
     private static Region analyticsColumn(JournalView j) {
-        VBox stats = new VBox(6, UiKit.sectionTitle("STATS (XP POR ATRIBUTO)"));
+        VBox stats = new VBox(6, UiKit.sectionTitle("ATRIBUTOS (XP)"));
         for (JournalView.StatLine s : j.stats()) {
-            Label line = UiKit.muted(String.format("%-4s  Nv %-3d   %s XP", s.stat(), s.level(), UiKit.num(s.xp())));
+            Label line = UiKit.muted(String.format("%-18s  Nv %-3d   %s XP",
+                    s.name() + " (" + s.abbr() + ")", s.level(), UiKit.num(s.xp())));
             stats.getChildren().add(line);
         }
 

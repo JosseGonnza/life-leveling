@@ -109,6 +109,12 @@ final class QuestsScreen {
         ComboBox<QuestRank> rank = new ComboBox<>();
         rank.getItems().addAll(QuestRank.values());
         rank.setValue(QuestRank.E);
+        rank.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(QuestRank r) {
+                return r == null ? "" : r.getLetter() + "  ·  " + r.getDifficultyName();
+            }
+            @Override public QuestRank fromString(String s) { return null; }
+        });
 
         DatePicker deadline = new DatePicker();
         deadline.setPromptText("Plazo (opcional)");

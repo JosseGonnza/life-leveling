@@ -143,6 +143,16 @@ public enum StatType {
         return icon + " " + displayName;
     }
 
+    public String getAbbreviation() {
+        return switch (this) {
+            case STRENGTH -> "FUE";
+            case INTELLECT -> "INT";
+            case WISDOM -> "SAB";
+            case DISCIPLINE -> "DIS";
+            case CHARISMA -> "CAR";
+        };
+    }
+
     public String getIcon() { return icon; }
     public String getDisplayName() { return displayName; }
     public String getDescription() { return description; }

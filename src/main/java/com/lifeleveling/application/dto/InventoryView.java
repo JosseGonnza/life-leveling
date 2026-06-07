@@ -20,7 +20,7 @@ public record InventoryView(
 
     public static InventoryView from(Inventory inv) {
         List<OwnedItemView> owned = inv.getOwnedItems().stream()
-                .map(i -> new OwnedItemView(i.id(), i.name(), i.category().name(),
+                .map(i -> new OwnedItemView(i.id(), i.name(), i.category().getDisplayName(),
                         i.isConsumable(), i.slot() != ItemSlot.NONE, inv.isCooldownActive(i.id())))
                 .toList();
 

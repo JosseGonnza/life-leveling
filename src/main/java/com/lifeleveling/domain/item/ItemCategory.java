@@ -19,5 +19,24 @@ public enum ItemCategory {
 
     // --- ENDGAME & SPECIALS ---
     TREASURE,       // Metas financieras (Coche, Casa, Libertad)
-    ARTIFACT        // Items únicos con mecánicas especiales (Anillo Titán)
+    ARTIFACT;       // Items únicos con mecánicas especiales (Anillo Titán)
+
+    public String getDisplayName() {
+        return switch (this) {
+            case CLOTHING -> "Ropa";
+            case TECH -> "Tecnología";
+            case FURNITURE -> "Mobiliario";
+            case DECORATION -> "Decoración";
+            case FOOD_HEALTHY -> "Comida sana";
+            case FOOD_JUNK -> "Comida basura";
+            case DRINK_ENERGY -> "Bebida energética";
+            case DRINK_SOCIAL -> "Bebida social";
+            case MEDICINE -> "Medicina";
+            case SUPPLEMENT -> "Suplemento";
+            case LUXURY -> "Capricho";
+            case ENTERTAINMENT -> "Ocio";
+            case TREASURE -> "Tesoro";
+            case ARTIFACT -> "Artefacto";
+        };
+    }
 }

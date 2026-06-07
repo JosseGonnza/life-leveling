@@ -23,14 +23,14 @@ public record ShopItemView(
     public static ShopItemView from(Item item, int gold) {
         String slot = item.slot() == ItemSlot.NONE ? "—" : item.slot().getDisplayName();
         return new ShopItemView(item.id(), item.name(), item.price(),
-                item.category().name(), slot, effect(item), item.price() <= gold);
+                item.category().getDisplayName(), slot, effect(item), item.price() <= gold);
     }
 
     private static String effect(Item item) {
         Map<StatType, Integer> bonuses = item.statBonuses();
         if (!bonuses.isEmpty()) {
             return bonuses.entrySet().stream()
-                    .map(e -> "+" + e.getValue() + " " + e.getKey().name().substring(0, 3))
+                    .map(e -> "+" + e.getValue() + " " + e.getKey().getAbbreviation())
                     .collect(Collectors.joining("  "));
         }
         if (item.hpRecovery() > 0) return "+" + item.hpRecovery() + " HP";

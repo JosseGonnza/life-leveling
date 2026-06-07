@@ -16,6 +16,7 @@ public record PlayerView(
         String hpState,
         int gold,
         String rank,
+        String rankLetter,
         double salaryMultiplier,
         StatsView stats
 ) {
@@ -37,6 +38,7 @@ public record PlayerView(
                 p.getHpState().getDisplayName(),
                 p.getCurrentGold(),
                 p.getCurrentRank().getDisplayName(),
+                p.getCurrentRank().getLetter(),
                 p.getCurrentRank().getGoldMultiplier(),
                 StatsView.from(p.getEffectiveStats())
         );

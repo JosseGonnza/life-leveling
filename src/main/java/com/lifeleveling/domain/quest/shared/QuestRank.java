@@ -87,9 +87,13 @@ public enum QuestRank {
     }
 
     // Getters y Display
+    /** Letra del rango para la UI (E, D, C, B, A, S, S+, S++). */
+    public String getLetter() {
+        return name().replace("_PLUS_PLUS", "++").replace("_PLUS", "+");
+    }
+
     public String toDisplayString() {
-        String enumName = this.name().replace("_PLUS_PLUS", "++").replace("_PLUS", "+");
-        return String.format("%s %s (Rango %s)", icon, difficultyName, enumName);
+        return String.format("%s %s (Rango %s)", icon, difficultyName, getLetter());
     }
 
     public String getIcon() { return icon; }

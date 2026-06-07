@@ -60,14 +60,21 @@ final class ArmoryScreen {
         return root;
     }
 
-    // ---- Modo SHOP ----
+    // ---- Modo SHOP (agrupado por categoría) ----
     private static Region shopPane(GameFacade facade, Runnable refresh) {
-        VBox pane = new VBox(10, UiKit.muted("🪙 " + UiKit.num(facade.state().gold()) + " G disponible"));
-        FlowPane grid = new FlowPane(12, 12);
+        VBox pane = new VBox(14, UiKit.muted("🪙 " + UiKit.num(facade.state().gold()) + " G disponible"));
+
+        java.util.Map<String, java.util.List<ShopItemView>> byCategory = new java.util.LinkedHashMap<>();
         for (ShopItemView item : facade.shopCatalog()) {
-            grid.getChildren().add(shopCard(item, facade, refresh));
+            byCategory.computeIfAbsent(item.category(), k -> new java.util.ArrayList<>()).add(item);
         }
-        pane.getChildren().add(grid);
+        for (var entry : byCategory.entrySet()) {
+            FlowPane grid = new FlowPane(12, 12);
+            for (ShopItemView item : entry.getValue()) {
+                grid.getChildren().add(shopCard(item, facade, refresh));
+            }
+            pane.getChildren().addAll(UiKit.sectionTitle(entry.getKey()), grid);
+        }
         return pane;
     }
 
@@ -75,7 +82,6 @@ final class ArmoryScreen {
         Label name = new Label(item.name());
         name.getStyleClass().add("item-name");
         name.setWrapText(true);
-        Label cat = UiKit.caption(item.category());
         Label effect = UiKit.muted(item.effect());
         effect.setWrapText(true);
         Label price = new Label("🪙 " + UiKit.num(item.price()) + " G");
@@ -86,7 +92,7 @@ final class ArmoryScreen {
         buy.setDisable(!item.affordable());
         buy.setOnAction(e -> { facade.buy(item.id()); refresh.run(); });
 
-        VBox card = new VBox(4, name, cat, effect, UiKit.spacer(2), price, buy);
+        VBox card = new VBox(4, name, effect, UiKit.spacer(2), price, buy);
         card.getStyleClass().add(item.affordable() ? "shop-card" : "shop-card-locked");
         return card;
     }

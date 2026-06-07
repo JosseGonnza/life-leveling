@@ -1,5 +1,7 @@
 package com.lifeleveling.ui;
 
+import com.lifeleveling.domain.player.StatType;
+
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -7,12 +9,20 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 
 /**
- * Radar pentagonal de las 5 stats (STR/INT/WIS/DIS/CHA), dibujado a mano sobre un Canvas.
+ * Radar pentagonal de las 5 stats (FUE/INT/SAB/DIS/CAR), dibujado a mano sobre un Canvas.
  * JavaFX no trae chart de tipo radar, así que lo pintamos nosotros.
  */
 final class StatRadar extends Canvas {
 
-    private static final String[] LABELS = {"STR", "INT", "WIS", "DIS", "CHA"};
+    private static final String[] LABELS = abbreviations();
+
+    private static String[] abbreviations() {
+        StatType[] types = StatType.values();
+        String[] out = new String[types.length];
+        for (int i = 0; i < types.length; i++) out[i] = types[i].getAbbreviation();
+        return out;
+    }
+
     private static final Color GRID = Color.web("#1E3A4C");
     private static final Color FILL = Color.web("#00FFFF", 0.18);
     private static final Color LINE = Color.web("#00FFFF");
@@ -31,7 +41,7 @@ final class StatRadar extends Canvas {
 
         double cx = w / 2, cy = h / 2 + 4;
         double radius = Math.min(w, h) / 2 - 26;
-        int max = Math.max(10, maxOf(values)); // techo suave para que no quede gigante
+        int max = 100; // escala fija al nivel máximo de stat (Biblia: cap nivel 100) → muestra el progreso real
 
         // Anillos de rejilla
         g.setStroke(GRID);
@@ -87,11 +97,5 @@ final class StatRadar extends Canvas {
     private double[] vertex(double cx, double cy, double r, int i) {
         double angle = -Math.PI / 2 + i * (2 * Math.PI / 5);
         return new double[]{cx + r * Math.cos(angle), cy + r * Math.sin(angle)};
-    }
-
-    private int maxOf(int[] v) {
-        int m = 0;
-        for (int x : v) m = Math.max(m, x);
-        return m;
     }
 }

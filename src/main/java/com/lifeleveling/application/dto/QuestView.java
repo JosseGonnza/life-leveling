@@ -24,7 +24,7 @@ public record QuestView(
                 q.id().toString(),
                 q.name(),
                 q.description(),
-                q.rank().name(),
+                q.rank().getLetter(),
                 q.getDeadline() == null ? null : q.getDeadline().toString(),
                 q.status().name(),
                 rewardXP,

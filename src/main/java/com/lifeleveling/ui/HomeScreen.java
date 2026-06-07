@@ -35,11 +35,12 @@ final class HomeScreen {
     private static Region statusColumn(PlayerView p) {
         Label name = new Label(p.name());
         name.getStyleClass().add("player-name");
-        Label rank = new Label(p.rank() + "  ·  RANGO");
+        Label rank = new Label("RANGO " + p.rankLetter() + "  ·  " + p.rank());
         rank.getStyleClass().add("rank-badge");
 
-        boolean critical = p.currentHP() < 30;
-        Region hp = UiKit.bar(p.currentHP() / 100.0, critical ? "bar-hp-critical" : "bar-hp", 210);
+        int hpVal = p.currentHP();
+        String hpClass = hpVal <= 0 ? "bar-hp-critical" : hpVal < 50 ? "bar-hp-tired" : "bar-hp";
+        Region hp = UiKit.bar(hpVal / 100.0, hpClass, 210);
         Label hpText = UiKit.muted(p.currentHP() + " / 100 HP   " + p.hpState());
 
         HBox slots = new HBox(6);

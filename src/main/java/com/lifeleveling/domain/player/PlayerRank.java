@@ -32,6 +32,11 @@ public enum PlayerRank {
     public String getIcon() { return icon; }
     public double getGoldMultiplier() { return goldMultiplier; }
 
+    /** Letra del rango para la UI (E, D, C, C+, B, A, S). */
+    public String getLetter() {
+        return this == C_PLUS ? "C+" : name();
+    }
+
     public boolean isAtLeast(PlayerRank other) {
         return this.ordinal() >= other.ordinal();
     }
