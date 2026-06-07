@@ -24,8 +24,8 @@ final class ArmoryScreen {
     static Region build(GameFacade facade, Nav nav) {
         VBox content = new VBox(12);
 
-        Button shopBtn = new Button("SHOP");
-        Button invBtn = new Button("INVENTORY");
+        Button shopBtn = new Button("TIENDA");
+        Button invBtn = new Button("INVENTARIO");
 
         Runnable showShop = new Runnable() {
             @Override public void run() {
@@ -42,7 +42,7 @@ final class ArmoryScreen {
         shopBtn.setOnAction(e -> showShop.run());
         invBtn.setOnAction(e -> showInv.run());
 
-        Label title = new Label("THE ARMORY");
+        Label title = new Label("ARMERÍA");
         title.getStyleClass().add("screen-title");
         HBox toggle = new HBox(8, shopBtn, invBtn);
         HBox header = new HBox(16, title, UiKit.hgrow(), toggle);
@@ -102,7 +102,7 @@ final class ArmoryScreen {
 
         VBox bag = new VBox(8);
         if (inv.owned().isEmpty()) {
-            bag.getChildren().add(UiKit.muted("Mochila vacía. Compra en SHOP."));
+            bag.getChildren().add(UiKit.muted("Mochila vacía. Compra en la TIENDA."));
         }
         for (InventoryView.OwnedItemView item : inv.owned()) {
             bag.getChildren().add(ownedRow(item, facade, refresh));

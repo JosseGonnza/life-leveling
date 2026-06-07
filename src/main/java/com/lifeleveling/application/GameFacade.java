@@ -37,6 +37,7 @@ public final class GameFacade {
 
     private final PlayerRepository repository;
     private final Notifier notifier;
+    private final Clock clock;
 
     private final CareerService career = new CareerService();
     private final DailyHabitService habits = new DailyHabitService();
@@ -50,6 +51,7 @@ public final class GameFacade {
     public GameFacade(PlayerRepository repository, Clock clock, Notifier notifier) {
         this.repository = repository;
         this.notifier = notifier;
+        this.clock = clock;
         this.quests = new QuestService(clock);
         this.day = new DayService(clock);
     }
@@ -68,8 +70,23 @@ public final class GameFacade {
         loaded.ifPresent(p -> {
             this.current = p;
             wireEvents();
+            catchUpDay();
         });
         return loaded.isPresent();
+    }
+
+    /**
+     * Cierre automático de día al reabrir (Opción A): si el día ha cambiado desde la última
+     * sesión, cierra UNA vez el día en curso y reanuda hoy, perdonando los días muertos
+     * (sin penalizar huecos). Persiste el resultado.
+     */
+    private void catchUpDay() {
+        LocalDate today = clock.today();
+        LocalDate last = current.getLastActiveDate();
+        if (last != null && today.isAfter(last)) {
+            day.endDay(current);
+        }
+        persist();
     }
 
     // ----- Comandos -----
@@ -268,6 +285,7 @@ public final class GameFacade {
     }
 
     private void persist() {
+        current.setLastActiveDate(clock.today());
         repository.save(current);
     }
 

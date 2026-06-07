@@ -12,7 +12,6 @@ interface Nav {
     void armory();
     void titles();
     void journal();
-    void continueDay();
     /** Pantallas aún no implementadas: feedback temporal. */
     void todo(String screenName);
 }

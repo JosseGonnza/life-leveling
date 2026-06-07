@@ -35,7 +35,7 @@ final class HomeScreen {
     private static Region statusColumn(PlayerView p) {
         Label name = new Label(p.name());
         name.getStyleClass().add("player-name");
-        Label rank = new Label(p.rank() + "  ·  RANK");
+        Label rank = new Label(p.rank() + "  ·  RANGO");
         rank.getStyleClass().add("rank-badge");
 
         boolean critical = p.currentHP() < 30;
@@ -50,8 +50,8 @@ final class HomeScreen {
         }
 
         VBox box = new VBox(10, name, rank, UiKit.spacer(8),
-                UiKit.sectionTitle("STATUS"), hp, hpText, UiKit.spacer(8),
-                UiKit.sectionTitle("ACTIVE DEBUFFS"), slots);
+                UiKit.sectionTitle("ESTADO"), hp, hpText, UiKit.spacer(8),
+                UiKit.sectionTitle("DEBUFFS ACTIVOS"), slots);
         box.getStyleClass().add("panel");
         box.setPrefWidth(240);
         return box;
@@ -69,7 +69,7 @@ final class HomeScreen {
         StatRadar radar = new StatRadar(220);
         radar.render(s.strength(), s.intellect(), s.wisdom(), s.discipline(), s.charisma());
 
-        VBox box = new VBox(6, UiKit.caption("PLAYER LEVEL"), lvl, xp, xpText, UiKit.spacer(6), radar);
+        VBox box = new VBox(6, UiKit.caption("NIVEL"), lvl, xp, xpText, UiKit.spacer(6), radar);
         box.setAlignment(Pos.TOP_CENTER);
         box.getStyleClass().add("panel");
         HBox.setHgrow(box, Priority.ALWAYS);
@@ -78,7 +78,7 @@ final class HomeScreen {
 
     private static Region dailyColumn(DailyChecklistView checklist) {
         VBox box = new VBox(8, UiKit.sectionTitle(
-                "DAILY QUESTS   " + checklist.completedCount() + "/" + checklist.total()));
+                "MISIONES DIARIAS   " + checklist.completedCount() + "/" + checklist.total()));
         for (DailyChecklistView.Habit h : checklist.habits()) {
             Label label = new Label(h.label());
             label.getStyleClass().add(h.done() ? "habit-done" : "habit-pending");
@@ -96,19 +96,18 @@ final class HomeScreen {
 
     private static Region bottomBar(PlayerView p, Nav nav) {
         HBox left = new HBox(10,
-                UiKit.navButton("Daily", nav::daily),
-                UiKit.navButton("Quests", nav::quests),
-                UiKit.navButton("Gates", nav::gates),
-                UiKit.navButton("Armory", nav::armory));
+                UiKit.navButton("Misiones", nav::quests),
+                UiKit.navButton("Portales", nav::gates),
+                UiKit.navButton("Armería", nav::armory));
         left.setAlignment(Pos.CENTER_LEFT);
 
-        Button cont = new Button("CONTINUE  ▸");
+        Button cont = new Button("REGISTRAR HÁBITOS  ▸");
         cont.getStyleClass().add("continue-btn");
-        cont.setOnAction(e -> nav.continueDay());
+        cont.setOnAction(e -> nav.daily());
 
         HBox right = new HBox(10,
-                UiKit.navButton("Titles", nav::titles),
-                UiKit.navButton("Journal", nav::journal));
+                UiKit.navButton("Hall of Fame", nav::titles),
+                UiKit.navButton("Diario", nav::journal));
         Label gold = new Label("🪙 " + UiKit.num(p.gold()) + " G");
         gold.getStyleClass().add("gold");
 

@@ -23,7 +23,7 @@ final class JournalScreen {
         HBox columns = new HBox(18, timelineColumn(j), analyticsColumn(j));
         VBox.setVgrow(columns, Priority.ALWAYS);
 
-        Label title = new Label("SYSTEM LOG");
+        Label title = new Label("DIARIO");
         title.getStyleClass().add("screen-title");
 
         VBox root = new VBox(12, title, columns, backBar(nav));
@@ -34,7 +34,7 @@ final class JournalScreen {
     private static Region timelineColumn(JournalView j) {
         VBox list = new VBox(8);
         if (j.timeline().isEmpty()) {
-            list.getChildren().add(UiKit.muted("Aún no has cerrado ningún día.\nPulsa CONTINUE en la Home para registrar el día de hoy."));
+            list.getChildren().add(UiKit.muted("Aún no se ha cerrado ningún día.\nRegistra tus hábitos hoy; el día se cierra solo al abrir la app en otra fecha."));
         }
         for (JournalView.DayEntry d : j.timeline()) {
             list.getChildren().add(dayRow(d));
@@ -44,7 +44,7 @@ final class JournalScreen {
         scroll.setFitToWidth(true);
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        VBox box = new VBox(10, UiKit.sectionTitle("TIMELINE   " + j.daysLogged() + " días"), scroll);
+        VBox box = new VBox(10, UiKit.sectionTitle("CRONOLOGÍA   " + j.daysLogged() + " días"), scroll);
         box.getStyleClass().add("panel");
         HBox.setHgrow(box, Priority.ALWAYS);
         return box;

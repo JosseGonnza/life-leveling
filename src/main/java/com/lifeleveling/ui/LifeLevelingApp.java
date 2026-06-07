@@ -46,7 +46,6 @@ public final class LifeLevelingApp extends Application {
         @Override public void armory() { shell.setCenter(ArmoryScreen.build(facade, this)); }
         @Override public void titles() { shell.setCenter(HallOfFameScreen.build(facade, this)); }
         @Override public void journal() { shell.setCenter(JournalScreen.build(facade, this)); }
-        @Override public void continueDay() { facade.endDay(); home(); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
 

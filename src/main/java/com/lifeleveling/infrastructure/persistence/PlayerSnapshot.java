@@ -31,7 +31,8 @@ public record PlayerSnapshot(
         List<DaySnap> dailyHistory,
         int perfectDayStreak,
         int maxPerfectDayStreak,
-        BurnoutSnap burnout
+        BurnoutSnap burnout,
+        String lastActiveDate
 ) {
     public record StatSnap(String type, int level, int xp) {}
 

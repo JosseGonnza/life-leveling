@@ -54,6 +54,14 @@ public enum HPState {
         }
     }
 
+    public String getDisplayName() {
+        return switch (this) {
+            case CRITICAL -> "Crítico";
+            case TIRED -> "Cansado";
+            case HEALTHY -> "Saludable";
+        };
+    }
+
     //Verifica si este estado permite iniciar Quests de alto rango (B+)
     public boolean canStartHighRankQuests() {
         return this == HEALTHY;

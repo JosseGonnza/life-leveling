@@ -90,7 +90,8 @@ final class PlayerSnapshotMapper {
                 ce.getTotalCareerHours(), ce.getTotalFlowSessions(), ce.getTotalSessions(),
                 milestones, gates, history,
                 p.getGateTracker().getPerfectDayStreak(), p.getGateTracker().getMaxPerfectDayStreak(),
-                burnout);
+                burnout,
+                p.getLastActiveDate() == null ? null : p.getLastActiveDate().toString());
     }
 
     static Player toDomain(PlayerSnapshot s) {
@@ -150,6 +151,10 @@ final class PlayerSnapshotMapper {
                     QuestStatus.valueOf(q.status()), Instant.parse(q.createdAt()),
                     q.completedAt() == null ? null : Instant.parse(q.completedAt()),
                     q.failedAt() == null ? null : Instant.parse(q.failedAt())));
+        }
+
+        if (s.lastActiveDate() != null) {
+            player.setLastActiveDate(LocalDate.parse(s.lastActiveDate()));
         }
 
         return player;

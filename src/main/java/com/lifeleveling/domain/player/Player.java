@@ -74,6 +74,10 @@ public class Player {
 
     private BurnoutLock activeBurnoutLock;
 
+    // Último día en que el jugador estuvo activo (día en curso sin cerrar). Lo usa la capa app
+    // para el cierre automático de día al reabrir: si hoy > lastActiveDate, se cierra el día previo.
+    private LocalDate lastActiveDate;
+
     // Sistema de eventos para notificaciones (reemplaza System.out.println)
     private GameEventPublisher eventPublisher;
 
@@ -117,6 +121,14 @@ public class Player {
 
     public GameEventPublisher getEventPublisher() {
         return eventPublisher;
+    }
+
+    public LocalDate getLastActiveDate() {
+        return lastActiveDate;
+    }
+
+    public void setLastActiveDate(LocalDate date) {
+        this.lastActiveDate = date;
     }
 
     private void emit(GameEvent event) {

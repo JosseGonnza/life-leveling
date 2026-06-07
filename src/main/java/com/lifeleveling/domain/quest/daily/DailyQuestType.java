@@ -23,7 +23,7 @@ public enum DailyQuestType {
             InputType.BOOLEAN, Map.of(StatType.STRENGTH, 50), -5
     ),
     CODE(
-            "💻", "Code Session", "Registrar horas de programación",
+            "💻", "Sesión de Código", "Registrar horas de programación",
             InputType.EXTERNAL, Map.of(), 0
     ),
     READ(
@@ -31,7 +31,7 @@ public enum DailyQuestType {
             InputType.INTEGER, Map.of(StatType.WISDOM, 5), 0
     ),
     SKINCARE(
-            "✨", "Skincare", "Rutina de cuidado personal",
+            "✨", "Cuidado Personal", "Rutina de cuidado personal",
             InputType.BOOLEAN, Map.of(StatType.CHARISMA, 50), 10
     ),
     TIDY(

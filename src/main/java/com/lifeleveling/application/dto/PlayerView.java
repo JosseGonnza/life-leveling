@@ -34,7 +34,7 @@ public record PlayerView(
                 xpIntoLevel,
                 xpForLevelSpan,
                 p.getCurrentHP(),
-                p.getHpState().name(),
+                p.getHpState().getDisplayName(),
                 p.getCurrentGold(),
                 p.getCurrentRank().getDisplayName(),
                 p.getCurrentRank().getGoldMultiplier(),

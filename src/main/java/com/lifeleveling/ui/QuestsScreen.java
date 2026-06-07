@@ -51,7 +51,7 @@ final class QuestsScreen {
         HBox.setHgrow(detail, Priority.ALWAYS);
         VBox.setVgrow(middle, Priority.ALWAYS);
 
-        Label title = new Label("QUEST LOG — CONTRATOS");
+        Label title = new Label("MISIONES — CONTRATOS");
         title.getStyleClass().add("screen-title");
 
         VBox root = new VBox(10, title, middle, createForm(facade, nav), backBar(nav));
@@ -111,7 +111,7 @@ final class QuestsScreen {
         rank.setValue(QuestRank.E);
 
         DatePicker deadline = new DatePicker();
-        deadline.setPromptText("Deadline (opcional)");
+        deadline.setPromptText("Plazo (opcional)");
 
         Label hint = new Label();
         hint.getStyleClass().add("reward-hint");

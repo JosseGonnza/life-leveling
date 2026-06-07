@@ -39,7 +39,7 @@ final class DailyTasksScreen {
         list.getStyleClass().add("panel");
         VBox.setVgrow(list, Priority.ALWAYS);
 
-        Label title = new Label("SYSTEM TASKS — TODAY");
+        Label title = new Label("TAREAS DEL SISTEMA — HOY");
         title.getStyleClass().add("screen-title");
         Label progress = UiKit.muted(checklist.completedCount() + " / " + checklist.total() + " COMPLETADOS");
 

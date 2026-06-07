@@ -49,7 +49,7 @@ final class GatesScreen {
             middle.getChildren().add(specials);
         }
 
-        Label title = new Label("GATES — EL SISTEMA");
+        Label title = new Label("PORTALES — EL SISTEMA");
         title.getStyleClass().add("screen-title");
 
         VBox root = new VBox(12, title, middle, backBar(nav));
@@ -63,7 +63,7 @@ final class GatesScreen {
 
         SystemQuestType gate = status.gate();
         if (gate == null) {
-            card.getChildren().addAll(UiKit.sectionTitle("GATE ACTIVA"),
+            card.getChildren().addAll(UiKit.sectionTitle("PORTAL ACTIVO"),
                     UiKit.muted(status.message()));
             return card;
         }
@@ -86,7 +86,7 @@ final class GatesScreen {
         reward.getStyleClass().add("reward-hint");
 
         Label result = UiKit.muted("");
-        Button challenge = new Button("⛩  ABRIR GATE");
+        Button challenge = new Button("⛩  ABRIR PORTAL");
         challenge.getStyleClass().add("continue-btn");
         challenge.setOnAction(e -> {
             GateVerificationResult r = facade.challengeGate();
@@ -94,7 +94,7 @@ final class GatesScreen {
             else result.setText(r.message());
         });
 
-        card.getChildren().addAll(UiKit.sectionTitle("GATE DE ASCENSO"), name, desc,
+        card.getChildren().addAll(UiKit.sectionTitle("PORTAL DE ASCENSO"), name, desc,
                 UiKit.spacer(4), reqs, UiKit.spacer(4), reward, result,
                 UiKit.spacer(4), challenge);
         return card;
