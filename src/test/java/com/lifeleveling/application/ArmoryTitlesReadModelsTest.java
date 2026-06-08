@@ -1,6 +1,7 @@
 package com.lifeleveling.application;
 
 import com.lifeleveling.application.dto.InventoryView;
+import com.lifeleveling.application.dto.ElderQuestView;
 import com.lifeleveling.application.dto.ShopItemView;
 import com.lifeleveling.application.dto.TitlesView;
 import com.lifeleveling.application.dto.TreasureView;
@@ -79,6 +80,22 @@ class ArmoryTitlesReadModelsTest {
 
         assertTrue(f.shopCatalog().stream().noneMatch(i -> i.id().startsWith("treasure_")),
                 "los tesoros no deben aparecer en la tienda normal");
+    }
+
+    @Test
+    @DisplayName("juicios: 7 elder quests, bloqueados a nivel 1, con progreso evaluable y recompensa")
+    void elderQuestsReadModel() {
+        GameFacade f = newFacade(); // nivel 1
+
+        assertFalse(f.elderUnlocked(), "a nivel 1 los Juicios están bloqueados (requiere Nv 75)");
+
+        var elders = f.elderQuests();
+        assertEquals(7, elders.size());
+        assertTrue(elders.stream().allMatch(e -> !e.objectives().isEmpty()), "cada Juicio tiene objetivos");
+        assertTrue(elders.stream().allMatch(e -> e.progress() >= 0.0 && e.progress() <= 1.0), "progreso en [0,1]");
+        assertTrue(elders.stream().allMatch(e -> !e.reward().isBlank()), "cada Juicio muestra recompensa");
+        // Nota: algunas condiciones de abstinencia/racha dan `completed` vacuosamente sin el ciclo de
+        // temporada (Judgment Day) — comportamiento del endgame aún no cableado, no se asierta aquí.
     }
 
     @Test

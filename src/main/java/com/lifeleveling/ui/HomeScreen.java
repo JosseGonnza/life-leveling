@@ -108,6 +108,7 @@ final class HomeScreen {
         cont.setOnAction(e -> nav.daily());
 
         HBox right = new HBox(10,
+                UiKit.navButton("Juicios", nav::judgments),
                 UiKit.navButton("Hall of Fame", nav::titles),
                 UiKit.navButton("Diario", nav::journal));
         Label gold = new Label("🪙 " + UiKit.num(p.gold()) + " G");

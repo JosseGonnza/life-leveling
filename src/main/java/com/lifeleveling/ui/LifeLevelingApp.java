@@ -47,6 +47,7 @@ public final class LifeLevelingApp extends Application {
         @Override public void titles() { shell.setCenter(HallOfFameScreen.build(facade, this)); }
         @Override public void journal() { shell.setCenter(JournalScreen.build(facade, this)); }
         @Override public void treasures() { shell.setCenter(TreasuresScreen.build(facade, this)); }
+        @Override public void judgments() { shell.setCenter(JudgmentsScreen.build(facade, this)); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
 
@@ -93,6 +94,7 @@ public final class LifeLevelingApp extends Application {
             case "titles" -> nav.titles();
             case "journal" -> nav.journal();
             case "treasures" -> nav.treasures();
+            case "judgments" -> nav.judgments();
             default -> nav.home();
         }
     }

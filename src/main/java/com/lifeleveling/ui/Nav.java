@@ -13,6 +13,7 @@ interface Nav {
     void titles();
     void journal();
     void treasures();
+    void judgments();
     /** Pantallas aún no implementadas: feedback temporal. */
     void todo(String screenName);
 }

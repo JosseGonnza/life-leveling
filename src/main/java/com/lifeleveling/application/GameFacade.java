@@ -1,6 +1,7 @@
 package com.lifeleveling.application;
 
 import com.lifeleveling.application.dto.DailyChecklistView;
+import com.lifeleveling.application.dto.ElderQuestView;
 import com.lifeleveling.application.dto.InventoryView;
 import com.lifeleveling.application.dto.JournalView;
 import com.lifeleveling.application.dto.PlayerView;
@@ -289,6 +290,20 @@ public final class GameFacade {
     /** La pestaña Tesoros se desbloquea al alcanzar Rango A (Senior). */
     public boolean treasuresUnlocked() {
         return game().getCurrentRank().ordinal() >= PlayerRank.A.ordinal();
+    }
+
+    /** La pestaña Juicios (Elder Quests) se desbloquea al alcanzar el Nivel General 75. */
+    public boolean elderUnlocked() {
+        return game().getLevel() >= 75;
+    }
+
+    /** Los 7 Juicios del Monarca con su progreso actual (read-only: sin reclamar ni Season Lock en v1). */
+    public List<ElderQuestView> elderQuests() {
+        var ctx = new com.lifeleveling.domain.quest.condition.ConditionContext(
+                game(), null, game().getGateTracker(), clock.today());
+        return java.util.Arrays.stream(com.lifeleveling.domain.quest.elder.ElderQuestType.values())
+                .map(type -> ElderQuestView.from(type, ctx))
+                .toList();
     }
 
     public InventoryView inventory() {

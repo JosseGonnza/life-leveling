@@ -107,5 +107,6 @@ public enum ElderQuestType {
     public ElderQuestFrequency getFrequency() { return frequency; }
     public String toDisplayString() { return icon + " " + name + " [" + frequency.getDisplayName() + "]"; }
     public String getName() { return name; }
+    public String getIcon() { return icon; }
     public String getDescription() { return description; }
 }
