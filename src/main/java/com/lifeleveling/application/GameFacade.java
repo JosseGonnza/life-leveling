@@ -188,6 +188,13 @@ public final class GameFacade {
         return rank.canStartWith(game().getHpState());
     }
 
+    /** Hook de dev/QA (LL_HP): baja el HP del jugador para revisar el gating por estado. No persiste; no usar en producción. */
+    public PlayerView debugDamageTo(int targetHp) {
+        Player p = game();
+        if (targetHp < p.getCurrentHP()) p.takeDamage(p.getCurrentHP() - targetHp);
+        return state();
+    }
+
     public List<WeeklyQuestView> weeklyQuests() {
         LocalDate today = clock.today();
         return game().getWeeklyManager().getActiveQuests().stream()

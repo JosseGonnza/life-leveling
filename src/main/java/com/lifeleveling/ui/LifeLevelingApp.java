@@ -59,6 +59,7 @@ public final class LifeLevelingApp extends Application {
         if (!facade.loadGame()) {
             facade.newGame("Jose");
         }
+        applyHpOverride();
 
         shell = new BorderPane();
         shell.getStyleClass().add("app-root");
@@ -80,6 +81,16 @@ public final class LifeLevelingApp extends Application {
         stage.centerOnScreen();
         applyScreenOverride();
         maybeScreenshot();
+    }
+
+    /** Hook de dev: si LL_HP=n, baja el HP del jugador al arrancar (para revisar el gating por estado). */
+    private void applyHpOverride() {
+        String hp = System.getenv("LL_HP");
+        if (hp == null) return;
+        try {
+            facade.debugDamageTo(Integer.parseInt(hp.trim()));
+        } catch (NumberFormatException ignored) {
+        }
     }
 
     /** Hook de dev: si LL_SCREEN=nombre, abre esa pantalla al arrancar (para revisar/capturar). */
