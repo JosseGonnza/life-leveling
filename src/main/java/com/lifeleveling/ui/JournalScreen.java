@@ -53,7 +53,7 @@ final class JournalScreen {
     private static Region dayRow(JournalView.DayEntry d) {
         Label date = new Label(d.date());
         date.getStyleClass().add("item-name");
-        String marks = (d.perfectDay() ? "🌟 Perfect Day  " : "") + (d.burnout() ? "💀 Burnout  " : "");
+        String marks = (d.perfectDay() ? "🌟 Día Perfecto  " : "") + (d.burnout() ? "💀 Burnout  " : "");
         Label tags = new Label(marks.isBlank() ? "—" : marks.trim());
         tags.getStyleClass().add(d.burnout() ? "check-pending" : "check-done");
 
@@ -75,7 +75,7 @@ final class JournalScreen {
         }
 
         VBox totals = new VBox(6, UiKit.sectionTitle("TOTALES"),
-                kv("Perfect Days", String.valueOf(j.perfectDaysTotal())),
+                kv("Días Perfectos", String.valueOf(j.perfectDaysTotal())),
                 kv("Racha actual / máx", j.perfectDayStreak() + " / " + j.maxPerfectDayStreak()),
                 kv("Burnouts superados", String.valueOf(j.burnoutsRecovered())),
                 kv("Páginas leídas", UiKit.num(j.totalPagesRead())),

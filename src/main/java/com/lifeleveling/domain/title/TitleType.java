@@ -468,7 +468,7 @@ public enum TitleType {
     HAND_OF_THE_KING(
             "Mano del Rey",
             TitleCategory.ELDER,
-            "20 Perfect Days en un mes. El buff más potente del juego.",
+            "20 Días Perfectos en un mes. El buff más potente del juego.",
             TitleRequirementType.ELDER_QUEST,
             7, null, null, 0, 0, null,
             List.of(TitleBuff.allStatsXP(0.20))

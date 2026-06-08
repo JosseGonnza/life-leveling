@@ -303,7 +303,7 @@ public class WeeklyManager {
                 activeQuests.set(i, updatedQuest);
 
                 if (updatedQuest.isCompleted() && !wasCompletedBefore) {
-                    System.out.println("🔥 ¡THE STREAK COMPLETADA! 5 Perfect Days esta semana.");
+                    System.out.println("🔥 ¡THE STREAK COMPLETADA! 5 Días Perfectos esta semana.");
                     return Optional.of(WeeklyQuestType.THE_STREAK.getReward());
                 }
             }

@@ -203,7 +203,7 @@ public class Player {
         // 1. Si termina el día y no lograste el Perfect Day, la racha vuelve a 0.
         if (!gateTracker.isPerfectDayAchievedToday()) {
             if (gateTracker.getPerfectDayStreak() > 0) {
-                System.out.println("💔 Racha de Perfect Days rota. Vuelta a 0.");
+                System.out.println("💔 Racha de Días Perfectos rota. Vuelta a 0.");
                 gateTracker.resetPerfectDayStreak();
             }
         }

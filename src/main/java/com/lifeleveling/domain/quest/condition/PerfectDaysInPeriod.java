@@ -15,7 +15,7 @@ public record PerfectDaysInPeriod(int requiredCount, int periodDays) implements 
     @Override
     public String getProgressText(ConditionContext context) {
         int current = context.tracker().getPerfectDaysCountInLastDays(periodDays);
-        return String.format("Perfect Days (30d): %d/%d", current, requiredCount);
+        return String.format("Días Perfectos (30d): %d/%d", current, requiredCount);
     }
 
     @Override

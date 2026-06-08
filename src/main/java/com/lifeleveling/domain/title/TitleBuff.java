@@ -189,13 +189,21 @@ public record TitleBuff(
         String valueStr = String.format("+%.0f%%", value * 100);
 
         return switch (type) {
-            case STAT_XP_MULTIPLIER -> valueStr + " " + targetStat.getDisplayName() + " XP";
+            case STAT_XP_MULTIPLIER -> valueStr + " XP de " + targetStat.getDisplayName();
             case GENERAL_XP_MULTIPLIER -> valueStr + " XP General";
-            case ALL_STATS_XP_MULTIPLIER -> valueStr + " ALL STATS XP";
-            case GOLD_MULTIPLIER -> valueStr + " Gold Gain";
-            case HP_RECOVERY_BONUS -> valueStr + " HP Recovery";
-            case DEBUFF_IMMUNITY -> "Inmunidad a " + debuffImmunity;
-            case READ_XP_MULTIPLIER -> "READ x" + value + " XP";
+            case ALL_STATS_XP_MULTIPLIER -> valueStr + " XP de todas las stats";
+            case GOLD_MULTIPLIER -> valueStr + " Oro ganado";
+            case HP_RECOVERY_BONUS -> valueStr + " Recuperación de HP";
+            case DEBUFF_IMMUNITY -> "Inmunidad a " + debuffDisplayName();
+            case READ_XP_MULTIPLIER -> "Lectura x" + value + " XP";
         };
+    }
+
+    private String debuffDisplayName() {
+        try {
+            return com.lifeleveling.domain.debuff.DebuffType.valueOf(debuffImmunity).getDisplayName();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return debuffImmunity;
+        }
     }
 }

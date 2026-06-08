@@ -53,7 +53,7 @@ public record GameEvent(GameEventType type, String message) {
 
     public static GameEvent perfectDay() {
         return new GameEvent(GameEventType.PERFECT_DAY,
-                "🌟 ¡PERFECT DAY! +100 XP, +100 G, HP MAX 🌟");
+                "🌟 ¡DÍA PERFECTO! +100 XP, +100 G, HP MAX 🌟");
     }
 
     public static GameEvent debuffApplied(String debuffName) {

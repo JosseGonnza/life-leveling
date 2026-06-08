@@ -257,7 +257,7 @@ public enum WeeklyQuestType {
     public String getTargetUnit() {
         return switch (conditionType) {
             case DAILY_HABIT_COUNT, DUAL_DAILY_HABIT_COUNT -> "días";
-            case PERFECT_DAYS_COUNT -> "Perfect Days";
+            case PERFECT_DAYS_COUNT -> "Días Perfectos";
             case ACCUMULATED_HOURS -> "horas";
             case ACCUMULATED_PAGES -> "páginas";
         };

@@ -26,7 +26,7 @@ public enum SystemQuestType {
 
     GATE_E_TO_D(
             "🟢", "El Portal del Novato",
-            "Completar 7 Perfect Days consecutivos.",
+            "Completar 7 Días Perfectos consecutivos.",
             10, null, PlayerRank.D, 500, 500, null,
             List.of(new PerfectDayStreak(7))
     ),

@@ -185,7 +185,7 @@ class WeeklyQuestTypeTest {
         @DisplayName("THE_STREAK: target = 5 Perfect Days")
         void theStreak_target5PerfectDays() {
             assertEquals(5, WeeklyQuestType.THE_STREAK.getTarget());
-            assertEquals("Perfect Days", WeeklyQuestType.THE_STREAK.getTargetUnit());
+            assertEquals("Días Perfectos", WeeklyQuestType.THE_STREAK.getTargetUnit());
         }
     }
 
@@ -419,7 +419,7 @@ class WeeklyQuestTypeTest {
             assertEquals("3/6 días", WeeklyQuestType.HIBERNATOR.formatProgress(3));
             assertEquals("75/150 páginas", WeeklyQuestType.THE_SCHOLAR.formatProgress(75));
             assertEquals("6/12 horas", WeeklyQuestType.CODE_MARATHON.formatProgress(6));
-            assertEquals("2/5 Perfect Days", WeeklyQuestType.THE_STREAK.formatProgress(2));
+            assertEquals("2/5 Días Perfectos", WeeklyQuestType.THE_STREAK.formatProgress(2));
         }
     }
 

@@ -226,7 +226,7 @@ class TitleBuffTest {
             String display = buff.toDisplayString();
 
             assertTrue(display.contains("+10%"));
-            assertTrue(display.contains("Gold"));
+            assertTrue(display.contains("Oro"));
         }
 
         @Test
@@ -236,7 +236,7 @@ class TitleBuffTest {
             String display = buff.toDisplayString();
 
             assertTrue(display.contains("+20%"));
-            assertTrue(display.contains("HP Recovery"));
+            assertTrue(display.contains("Recuperación de HP"));
         }
 
         @Test
@@ -246,7 +246,7 @@ class TitleBuffTest {
             String display = buff.toDisplayString();
 
             assertTrue(display.contains("Inmunidad"));
-            assertTrue(display.contains("CHAOS"));
+            assertTrue(display.contains("Caos"));
         }
     }
 }

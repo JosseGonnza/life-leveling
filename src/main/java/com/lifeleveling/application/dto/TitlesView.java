@@ -35,7 +35,7 @@ public record TitlesView(
             TitleEntryView entry = new TitleEntryView(
                     type.name(),
                     type.getDisplayName(),
-                    type.getCategory().name(),
+                    type.getCategory().getDisplayName(),
                     type.getBuffsDisplay(),
                     type.getRequirementDisplay(),
                     type.getLore(),
