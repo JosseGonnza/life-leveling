@@ -113,6 +113,30 @@ class PersistenceRoundTripTest {
                 "el progreso semanal se conserva al recargar");
     }
 
+    @Test
+    @DisplayName("Historial de misiones: completadas y falladas se guardan y sobreviven al recargar")
+    void questHistoryPersists(@TempDir Path dir) {
+        Path save = dir.resolve("savegame.json");
+        Clock fixed = new FixedClock(LocalDate.of(2026, 6, 8));
+
+        GameFacade f1 = new GameFacade(new JsonPlayerRepository(save), fixed, e -> {});
+        f1.newGame("Jose");
+        var done = f1.createQuest("La hecha", "x", QuestRank.C, null);
+        var lost = f1.createQuest("La fallada", "y", QuestRank.B, null);
+        f1.completeQuest(done.id().toString());
+        f1.failQuest(lost.id().toString());
+
+        assertEquals(0, f1.activeQuests().size(), "ya no quedan activas");
+        assertEquals(2, f1.questHistory().size(), "ambas pasan al historial");
+
+        GameFacade f2 = new GameFacade(new JsonPlayerRepository(save), fixed, e -> {});
+        assertTrue(f2.loadGame());
+
+        assertEquals(2, f2.questHistory().size(), "el historial sobrevive al recargar");
+        assertEquals(1, f2.questHistory().stream().filter(q -> q.status().equals("COMPLETED")).count());
+        assertEquals(1, f2.questHistory().stream().filter(q -> q.status().equals("FAILED")).count());
+    }
+
     private record FixedClock(LocalDate date) implements Clock {
         @Override public Instant now() { return date.atStartOfDay(ZoneOffset.UTC).toInstant(); }
         @Override public LocalDate today() { return date; }

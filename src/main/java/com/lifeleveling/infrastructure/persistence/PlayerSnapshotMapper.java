@@ -68,6 +68,16 @@ final class PlayerSnapshotMapper {
                     q.status().name(), q.createdAt().toString(), null, null));
         }
 
+        List<PlayerSnapshot.QuestSnap> questHistory = new ArrayList<>();
+        for (UserQuest q : p.getQuestHistory()) {
+            questHistory.add(new PlayerSnapshot.QuestSnap(
+                    q.id().value().toString(), q.name(), q.description(), q.rank().name(),
+                    q.getDeadline() == null ? null : q.getDeadline().toString(),
+                    q.status().name(), q.createdAt().toString(),
+                    q.getCompletedAt() == null ? null : q.getCompletedAt().toString(),
+                    q.getFailedAt() == null ? null : q.getFailedAt().toString()));
+        }
+
         List<String> milestones = new ArrayList<>();
         p.getMilestoneTracker().getAchievedMilestones().forEach(m -> milestones.add(m.name()));
         List<String> gates = new ArrayList<>();
@@ -121,7 +131,7 @@ final class PlayerSnapshotMapper {
                 gt.getPerfectDayStreak(), gt.getMaxPerfectDayStreak(),
                 burnout,
                 p.getLastActiveDate() == null ? null : p.getLastActiveDate().toString(),
-                today, weekly);
+                today, weekly, questHistory);
     }
 
     static Player toDomain(PlayerSnapshot s) {
@@ -192,6 +202,17 @@ final class PlayerSnapshotMapper {
                     QuestStatus.valueOf(q.status()), Instant.parse(q.createdAt()),
                     q.completedAt() == null ? null : Instant.parse(q.completedAt()),
                     q.failedAt() == null ? null : Instant.parse(q.failedAt())));
+        }
+
+        if (s.questHistory() != null) {
+            for (PlayerSnapshot.QuestSnap q : s.questHistory()) {
+                player.addQuestToHistory(UserQuest.reconstitute(
+                        QuestId.from(q.id()), q.name(), q.description(), QuestRank.valueOf(q.rank()),
+                        q.deadline() == null ? null : LocalDate.parse(q.deadline()),
+                        QuestStatus.valueOf(q.status()), Instant.parse(q.createdAt()),
+                        q.completedAt() == null ? null : Instant.parse(q.completedAt()),
+                        q.failedAt() == null ? null : Instant.parse(q.failedAt())));
+            }
         }
 
         if (s.lastActiveDate() != null) {

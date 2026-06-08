@@ -18,6 +18,7 @@ public record WeeklyQuestView(
         String progressText,
         boolean completed,
         int rewardXP,
+        int rewardGold,
         int daysRemaining
 ) {
     public static WeeklyQuestView from(WeeklyQuest q, LocalDate today) {
@@ -31,6 +32,7 @@ public record WeeklyQuestView(
                 q.getProgressText(),
                 q.status() == QuestStatus.COMPLETED,
                 rewardXP,
+                r.gold(),
                 q.getDaysRemaining(today)
         );
     }

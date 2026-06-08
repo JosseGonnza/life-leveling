@@ -89,7 +89,7 @@ public final class UserQuest implements Quest {
 
         // Delegar al Player la aplicación de penalizaciones
         // Player.applyUserQuestFailure() maneja correctamente el clamping de oro
-        player.applyUserQuestFailure(this);
+        player.applyUserQuestFailure(this, failedAt);
 
         return fail(failedAt);
     }

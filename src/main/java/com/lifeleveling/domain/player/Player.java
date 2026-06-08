@@ -23,6 +23,7 @@ import com.lifeleveling.domain.title.TitleType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ public class Player {
 
     // User Quests en curso (PENDING/IN_PROGRESS). El agregado las posee; se borran al completarse/fallar.
     private final Map<String, UserQuest> activeUserQuests = new LinkedHashMap<>();
+    private final List<UserQuest> questHistory = new ArrayList<>();
 
     private BurnoutLock activeBurnoutLock;
 
@@ -456,7 +458,17 @@ public class Player {
         applyQuestReward(completed.reward());
         gateTracker.recordUserQuestCompleted(completed.rank(), completed.id().toString());
         activeUserQuests.remove(quest.id().toString());
+        questHistory.add(completed);
         return completed;
+    }
+
+    public List<UserQuest> getQuestHistory() {
+        return List.copyOf(questHistory);
+    }
+
+    /** Restaura una entrada del historial al cargar partida (persistencia). */
+    public void addQuestToHistory(UserQuest quest) {
+        if (quest != null) questHistory.add(quest);
     }
 
     public void registerSleepSession(int hours) {
@@ -593,14 +605,15 @@ public class Player {
     }
 
     /** Falla una quest activa por id (camino de la UI). */
-    public void applyUserQuestFailure(String questId) {
+    public void applyUserQuestFailure(String questId, Instant failedAt) {
         UserQuest quest = activeUserQuests.get(questId);
         if (quest == null) throw new IllegalArgumentException("Quest no activa: " + questId);
-        applyUserQuestFailure(quest);
+        applyUserQuestFailure(quest, failedAt);
     }
 
-    public void applyUserQuestFailure(UserQuest quest) {
+    public void applyUserQuestFailure(UserQuest quest, Instant failedAt) {
         activeUserQuests.remove(quest.id().toString());
+        questHistory.add(quest.fail(failedAt));
         int hpDamage = quest.rank().getMoralDamage();
         if (hpDamage <= 0) return;
         System.out.println("❌ Quest Fallida: " + quest.name() + " (-" + hpDamage + " HP)");

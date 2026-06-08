@@ -172,6 +172,10 @@ public final class GameFacade {
         return game().getActiveUserQuests().stream().map(QuestView::from).toList();
     }
 
+    public List<QuestView> questHistory() {
+        return game().getQuestHistory().stream().map(QuestView::from).toList();
+    }
+
     public List<WeeklyQuestView> weeklyQuests() {
         LocalDate today = clock.today();
         return game().getWeeklyManager().getActiveQuests().stream()

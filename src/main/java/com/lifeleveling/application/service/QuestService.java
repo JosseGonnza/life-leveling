@@ -33,6 +33,6 @@ public final class QuestService {
     }
 
     public void fail(Player player, String questId) {
-        player.applyUserQuestFailure(questId);
+        player.applyUserQuestFailure(questId, clock.now());
     }
 }

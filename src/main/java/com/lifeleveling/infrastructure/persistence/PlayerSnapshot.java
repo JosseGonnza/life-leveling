@@ -34,7 +34,8 @@ public record PlayerSnapshot(
         BurnoutSnap burnout,
         String lastActiveDate,
         TodaySnap today,
-        WeeklySnap weekly
+        WeeklySnap weekly,
+        List<QuestSnap> questHistory
 ) {
     public record StatSnap(String type, int level, int xp) {}
 

@@ -27,17 +27,54 @@ import java.util.function.Consumer;
  */
 final class QuestsScreen {
 
+    private static final List<String> TABS = List.of("ACTIVAS", "REALIZADAS", "FALLADAS");
+
     static Region build(GameFacade facade, Nav nav) {
-        List<QuestView> quests = facade.activeQuests();
+        Label title = new Label("MISIONES — CONTRATOS");
+        title.getStyleClass().add("screen-title");
+
+        final String[] tab = { "ACTIVAS" };
+        HBox tabs = new HBox(8);
+        VBox content = new VBox(10);
+        VBox.setVgrow(content, Priority.ALWAYS);
+
+        Runnable[] render = new Runnable[1];
+        render[0] = () -> {
+            tabs.getChildren().clear();
+            for (String t : TABS) {
+                Button b = new Button(t);
+                b.getStyleClass().add(t.equals(tab[0]) ? "continue-btn" : "nav-btn");
+                b.setOnAction(e -> { tab[0] = t; render[0].run(); });
+                tabs.getChildren().add(b);
+            }
+            content.getChildren().setAll(tabContent(tab[0], facade, nav));
+        };
+        render[0].run();
+
+        VBox root = new VBox(10, title, weeklySection(facade), tabs, content, backBar(nav));
+        root.getStyleClass().add("screen");
+        return root;
+    }
+
+    private static Region tabContent(String tab, GameFacade facade, Nav nav) {
+        boolean active = tab.equals("ACTIVAS");
+        List<QuestView> quests = switch (tab) {
+            case "REALIZADAS" -> facade.questHistory().stream()
+                    .filter(q -> q.status().equals("COMPLETED")).toList();
+            case "FALLADAS" -> facade.questHistory().stream()
+                    .filter(q -> q.status().equals("FAILED") || q.status().equals("EXPIRED")).toList();
+            default -> facade.activeQuests();
+        };
 
         VBox detail = new VBox(10);
         detail.getStyleClass().add("panel");
         detail.setPrefWidth(320);
-        Consumer<QuestView> showDetail = q -> detail.getChildren().setAll(detailContent(q, facade, nav));
+        Consumer<QuestView> showDetail = q -> detail.getChildren().setAll(
+                active ? detailContent(q, facade, nav) : historyDetail(q));
 
-        VBox listBox = new VBox(8, UiKit.sectionTitle("CONTRATOS ACTIVOS   " + quests.size()));
+        VBox listBox = new VBox(8, UiKit.sectionTitle(tab + "   " + quests.size()));
         if (quests.isEmpty()) {
-            listBox.getChildren().add(UiKit.muted("Sin contratos. Crea uno abajo."));
+            listBox.getChildren().add(UiKit.muted(active ? "Sin contratos. Crea uno abajo." : "Nada por aquí todavía."));
         }
         for (QuestView q : quests) {
             listBox.getChildren().add(questRow(q, showDetail));
@@ -46,18 +83,31 @@ final class QuestsScreen {
         listBox.setPrefWidth(340);
 
         if (!quests.isEmpty()) showDetail.accept(quests.get(0));
-        else detail.getChildren().add(UiKit.muted("Selecciona o crea un contrato."));
+        else detail.getChildren().add(UiKit.muted("—"));
 
         HBox middle = new HBox(20, listBox, detail);
         HBox.setHgrow(detail, Priority.ALWAYS);
         VBox.setVgrow(middle, Priority.ALWAYS);
 
-        Label title = new Label("MISIONES — CONTRATOS");
-        title.getStyleClass().add("screen-title");
+        VBox box = new VBox(10, middle);
+        VBox.setVgrow(box, Priority.ALWAYS);
+        if (active) box.getChildren().add(createForm(facade, nav));
+        return box;
+    }
 
-        VBox root = new VBox(10, title, weeklySection(facade), middle, createForm(facade, nav), backBar(nav));
-        root.getStyleClass().add("screen");
-        return root;
+    private static java.util.List<javafx.scene.Node> historyDetail(QuestView q) {
+        boolean completed = q.status().equals("COMPLETED");
+        Label name = new Label(q.name());
+        name.getStyleClass().add("player-name");
+        Label meta = UiKit.muted("Rango " + q.rank() + "  ·  " + (completed ? "✅ Completada" : "❌ Fallida"));
+        Label outcome = new Label(completed
+                ? "Ganaste  +" + UiKit.num(q.rewardXP()) + " XP"
+                : "Perdiste  -" + q.penaltyHP() + " HP");
+        outcome.getStyleClass().add("reward-hint");
+        Label desc = UiKit.muted(q.description() == null || q.description().isBlank()
+                ? "(sin descripción)" : q.description());
+        desc.setWrapText(true);
+        return List.of(UiKit.sectionTitle("DETALLE"), name, meta, outcome, UiKit.spacer(4), desc);
     }
 
     private static Region weeklySection(GameFacade facade) {
@@ -90,13 +140,23 @@ final class QuestsScreen {
         Label progress = UiKit.muted(w.progressText());
 
         String plazo = w.completed() ? "completada" : w.daysRemaining() + " días restantes";
-        HBox meta = new HBox(10, UiKit.caption("+" + UiKit.num(w.rewardXP()) + " XP"),
+        HBox meta = new HBox(10, UiKit.caption(rewardText(w)),
                 UiKit.hgrow(), UiKit.muted(plazo));
 
         VBox card = new VBox(5, name, desc, bar, progress, meta);
         card.getStyleClass().add("habit-row");
         card.setMinWidth(220);
         return card;
+    }
+
+    private static String rewardText(WeeklyQuestView w) {
+        StringBuilder sb = new StringBuilder();
+        if (w.rewardXP() > 0) sb.append("+").append(UiKit.num(w.rewardXP())).append(" XP");
+        if (w.rewardGold() > 0) {
+            if (sb.length() > 0) sb.append("   ");
+            sb.append("+").append(UiKit.num(w.rewardGold())).append(" G");
+        }
+        return sb.length() == 0 ? "—" : sb.toString();
     }
 
     private static Region questRow(QuestView q, Consumer<QuestView> onSelect) {

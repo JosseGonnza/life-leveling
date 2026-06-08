@@ -63,7 +63,10 @@ public final class LifeLevelingApp extends Application {
         shell.setTop(titleBar());
         nav.home();
 
-        Scene scene = new Scene(shell, 940, 580);
+        javafx.geometry.Rectangle2D screen = javafx.stage.Screen.getPrimary().getVisualBounds();
+        double w = Math.max(940, screen.getWidth() * 0.75);
+        double h = Math.max(580, screen.getHeight() * 0.75);
+        Scene scene = new Scene(shell, w, h);
         scene.setFill(Color.web("#050A14"));
         scene.getStylesheets().add(
                 getClass().getResource("/com/lifeleveling/ui/system.css").toExternalForm());
@@ -72,7 +75,24 @@ public final class LifeLevelingApp extends Application {
         stage.setTitle("Life Leveling");
         stage.setScene(scene);
         stage.show();
+        stage.centerOnScreen();
+        applyScreenOverride();
         maybeScreenshot();
+    }
+
+    /** Hook de dev: si LL_SCREEN=nombre, abre esa pantalla al arrancar (para revisar/capturar). */
+    private void applyScreenOverride() {
+        String screen = System.getenv("LL_SCREEN");
+        if (screen == null) return;
+        switch (screen.toLowerCase()) {
+            case "daily" -> nav.daily();
+            case "quests" -> nav.quests();
+            case "gates" -> nav.gates();
+            case "armory" -> nav.armory();
+            case "titles" -> nav.titles();
+            case "journal" -> nav.journal();
+            default -> nav.home();
+        }
     }
 
     private Region titleBar() {
