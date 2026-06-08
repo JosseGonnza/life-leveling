@@ -35,6 +35,8 @@ class GameFacadeCatchUpTest {
         assertTrue(day2.loadGame());
 
         assertEquals(1, day2.journal().daysLogged(), "el día previo debe cerrarse al reabrir en nueva fecha");
+        assertEquals("2026-06-06", day2.journal().timeline().get(0).date(),
+                "el día se archiva con la fecha REAL trabajada (6-jun), no con HOY (7-jun)");
     }
 
     @Test

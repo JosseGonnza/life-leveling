@@ -181,12 +181,22 @@ public class Player {
     // ========================================================================================
 
     public void updateState(Instant now) {
+        updateState(now, LocalDate.ofInstant(now, ZoneId.systemDefault()));
+    }
+
+    /**
+     * Variante con la fecha bajo la que se ARCHIVA el día (DailyHistory). Para el cierre automático
+     * (Opción A): al reabrir en otra fecha, el día pendiente se vuelca con la fecha en la que se trabajó
+     * de verdad ({@code closingDate}), no con HOY. La limpieza temporal (expiración de buffs/debuffs,
+     * burnout) sigue usando {@code now} real, para no resucitar lo que ya caducó durante el hueco.
+     */
+    public void updateState(Instant now, LocalDate closingDate) {
         LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
 
         // 0. Cerrar el día: volcar la actividad acumulada (horas, páginas, user quests, balance)
         //    al histórico ANTES de limpiar los flags, para que las GateConditions tengan datos.
         gateTracker.setDebuffsActiveToday(!debuffTracker.getActiveDebuffs().isEmpty());
-        gateTracker.closeDay(today, wallet.currentGold());
+        gateTracker.closeDay(closingDate, wallet.currentGold());
 
         // 1. Si termina el día y no lograste el Perfect Day, la racha vuelve a 0.
         if (!gateTracker.isPerfectDayAchievedToday()) {

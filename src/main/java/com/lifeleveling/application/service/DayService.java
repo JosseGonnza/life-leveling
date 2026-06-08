@@ -8,6 +8,7 @@ import com.lifeleveling.domain.quest.system.GateService;
 import com.lifeleveling.domain.quest.system.GateVerificationResult;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +35,12 @@ public final class DayService {
 
     public void endDay(Player player) {
         player.updateState(clock.now());
+        evaluateGateTriggers(player);
+    }
+
+    /** Cierre archivando el día bajo {@code closingDate} (cierre automático Opción A: el día real trabajado). */
+    public void endDay(Player player, LocalDate closingDate) {
+        player.updateState(clock.now(), closingDate);
         evaluateGateTriggers(player);
     }
 

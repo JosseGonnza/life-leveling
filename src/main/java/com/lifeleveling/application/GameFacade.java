@@ -84,7 +84,7 @@ public final class GameFacade {
         LocalDate today = clock.today();
         LocalDate last = current.getLastActiveDate();
         if (last != null && today.isAfter(last)) {
-            day.endDay(current);
+            day.endDay(current, last); // archiva el día bajo la fecha real trabajada, no HOY
         }
         persist();
     }
