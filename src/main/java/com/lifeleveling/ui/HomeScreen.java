@@ -99,7 +99,8 @@ final class HomeScreen {
         HBox left = new HBox(10,
                 UiKit.navButton("Misiones", nav::quests),
                 UiKit.navButton("Portales", nav::gates),
-                UiKit.navButton("Armería", nav::armory));
+                UiKit.navButton("Armería", nav::armory),
+                UiKit.navButton("Tesoros", nav::treasures));
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button cont = new Button("REGISTRAR HÁBITOS  ▸");

@@ -7,8 +7,12 @@ import com.lifeleveling.application.dto.PlayerView;
 import com.lifeleveling.application.dto.QuestView;
 import com.lifeleveling.application.dto.ShopItemView;
 import com.lifeleveling.application.dto.TitlesView;
+import com.lifeleveling.application.dto.TreasureView;
 import com.lifeleveling.application.dto.WeeklyQuestView;
+import com.lifeleveling.domain.item.Item;
 import com.lifeleveling.domain.item.ItemCatalog;
+import com.lifeleveling.domain.item.ItemCategory;
+import com.lifeleveling.domain.player.PlayerRank;
 import com.lifeleveling.domain.title.TitleType;
 import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.application.port.Notifier;
@@ -266,8 +270,25 @@ public final class GameFacade {
         int gold = game().getCurrentGold();
         int level = game().getLevel();
         return ItemCatalog.getShopInventory().stream()
+                .filter(item -> item.category() != ItemCategory.TREASURE)
                 .map(item -> ShopItemView.from(item, gold, level))
                 .toList();
+    }
+
+    /** Tesoros (money sinks de estatus). La pantalla los muestra siempre; el botón comprar exige Rango A. */
+    public List<TreasureView> treasures() {
+        int gold = game().getCurrentGold();
+        var inv = game().getInventory();
+        return ItemCatalog.getAllItems().stream()
+                .filter(item -> item.category() == ItemCategory.TREASURE)
+                .sorted(java.util.Comparator.comparingInt(Item::price))
+                .map(item -> TreasureView.from(item, gold, inv.hasItem(item.id())))
+                .toList();
+    }
+
+    /** La pestaña Tesoros se desbloquea al alcanzar Rango A (Senior). */
+    public boolean treasuresUnlocked() {
+        return game().getCurrentRank().ordinal() >= PlayerRank.A.ordinal();
     }
 
     public InventoryView inventory() {

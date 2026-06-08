@@ -3,6 +3,7 @@ package com.lifeleveling.application;
 import com.lifeleveling.application.dto.InventoryView;
 import com.lifeleveling.application.dto.ShopItemView;
 import com.lifeleveling.application.dto.TitlesView;
+import com.lifeleveling.application.dto.TreasureView;
 import com.lifeleveling.domain.title.TitleType;
 import com.lifeleveling.infrastructure.persistence.InMemoryPlayerRepository;
 import com.lifeleveling.infrastructure.time.SystemClock;
@@ -61,6 +62,23 @@ class ArmoryTitlesReadModelsTest {
 
         assertTrue(f.inventory().owned().stream().anyMatch(i -> i.id().equals("consumable_espresso")),
                 "el espresso comprado debe estar en el inventario");
+    }
+
+    @Test
+    @DisplayName("treasures: 4 tesoros ordenados por precio, bloqueados a rango E y fuera de la tienda")
+    void treasuresReadModel() {
+        GameFacade f = newFacade(); // rango E
+
+        assertFalse(f.treasuresUnlocked(), "a rango E los tesoros están bloqueados");
+
+        var tr = f.treasures();
+        assertEquals(4, tr.size());
+        assertTrue(tr.stream().noneMatch(TreasureView::owned), "nada conseguido al inicio");
+        assertEquals("treasure_setup", tr.get(0).id(), "ordenados por precio ascendente (150k primero)");
+        assertEquals("treasure_freedom", tr.get(3).id(), "Libertad Financiera (500k) la última");
+
+        assertTrue(f.shopCatalog().stream().noneMatch(i -> i.id().startsWith("treasure_")),
+                "los tesoros no deben aparecer en la tienda normal");
     }
 
     @Test
