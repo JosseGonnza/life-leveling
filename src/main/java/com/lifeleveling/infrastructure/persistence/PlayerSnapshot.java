@@ -32,7 +32,8 @@ public record PlayerSnapshot(
         int perfectDayStreak,
         int maxPerfectDayStreak,
         BurnoutSnap burnout,
-        String lastActiveDate
+        String lastActiveDate,
+        TodaySnap today
 ) {
     public record StatSnap(String type, int level, int xp) {}
 
@@ -46,4 +47,10 @@ public record PlayerSnapshot(
                           Map<String, Integer> completedQuestsCount) {}
 
     public record BurnoutSnap(String id, String triggeredAt, String expiresAt) {}
+
+    /** Estado del día en curso (intra-día): hábitos hechos hoy, acumuladores y flags. */
+    public record TodaySnap(int pagesRead, double careerHours, int minHP, boolean debuffsActive,
+                            boolean junkConsumed, boolean perfectDayAchieved, boolean burnoutOccurred,
+                            List<String> consumablesBought, List<String> completedQuestIds,
+                            Map<String, Integer> completedQuestsCount) {}
 }

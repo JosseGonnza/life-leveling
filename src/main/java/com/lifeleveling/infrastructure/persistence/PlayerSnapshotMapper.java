@@ -82,6 +82,16 @@ final class PlayerSnapshotMapper {
         PlayerSnapshot.BurnoutSnap burnout = lock == null ? null : new PlayerSnapshot.BurnoutSnap(
                 lock.id().toString(), lock.triggeredAt().toString(), lock.expiresAt().toString());
 
+        GateTracker gt = p.getGateTracker();
+        Map<String, Integer> todayCounts = new LinkedHashMap<>();
+        gt.getTodayCompletedQuestsCount().forEach((rank, n) -> todayCounts.put(rank.name(), n));
+        PlayerSnapshot.TodaySnap today = new PlayerSnapshot.TodaySnap(
+                gt.getTodayPagesRead(), gt.getTodayCareerHours(), gt.getTodayMinHP(),
+                gt.wasDebuffsActiveToday(), gt.wasJunkConsumedToday(),
+                gt.isPerfectDayAchievedToday(), gt.didBurnoutOccurToday(),
+                new ArrayList<>(gt.getTodayConsumablesBought()),
+                new ArrayList<>(gt.getTodayCompletedQuestIds()), todayCounts);
+
         CareerEngine ce = p.getCareerEngine();
         return new PlayerSnapshot(
                 p.getId().toString(), p.getName(), p.getCurrentHP(), p.getCurrentRank().name(),
@@ -89,9 +99,10 @@ final class PlayerSnapshotMapper {
                 p.getCurrentGold(), stats, owned, equipped, titlesUnlocked, titlesEquipped, quests,
                 ce.getTotalCareerHours(), ce.getTotalFlowSessions(), ce.getTotalSessions(),
                 milestones, gates, history,
-                p.getGateTracker().getPerfectDayStreak(), p.getGateTracker().getMaxPerfectDayStreak(),
+                gt.getPerfectDayStreak(), gt.getMaxPerfectDayStreak(),
                 burnout,
-                p.getLastActiveDate() == null ? null : p.getLastActiveDate().toString());
+                p.getLastActiveDate() == null ? null : p.getLastActiveDate().toString(),
+                today);
     }
 
     static Player toDomain(PlayerSnapshot s) {
@@ -129,6 +140,15 @@ final class PlayerSnapshotMapper {
         s.gatesCompleted().forEach(g -> gateTracker.markGateAsCompleted(SystemQuestType.valueOf(g)));
         gateTracker.setTotalCareerHours(s.careerHours());
         gateTracker.restorePerfectDayStreaks(s.perfectDayStreak(), s.maxPerfectDayStreak());
+
+        if (s.today() != null) {
+            PlayerSnapshot.TodaySnap t = s.today();
+            Map<QuestRank, Integer> todayCounts = new LinkedHashMap<>();
+            t.completedQuestsCount().forEach((rank, n) -> todayCounts.put(QuestRank.valueOf(rank), n));
+            gateTracker.restoreDailyState(t.pagesRead(), t.careerHours(), t.minHP(),
+                    t.debuffsActive(), t.junkConsumed(), t.perfectDayAchieved(), t.burnoutOccurred(),
+                    new ArrayList<>(t.consumablesBought()), new HashSet<>(t.completedQuestIds()), todayCounts);
+        }
 
         Set<MilestoneType> milestones = new HashSet<>();
         s.milestones().forEach(m -> milestones.add(MilestoneType.valueOf(m)));

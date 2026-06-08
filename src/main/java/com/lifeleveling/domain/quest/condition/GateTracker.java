@@ -517,6 +517,41 @@ public class GateTracker {
         this.maxPerfectDayStreak = max;
     }
 
+    // ---- Estado del DÍA EN CURSO (persistencia: getters + restore) ----
+
+    public int getTodayPagesRead() { return todayPagesRead; }
+    public double getTodayCareerHours() { return todayCareerHours; }
+    public int getTodayMinHP() { return todayMinHP; }
+    public boolean wasDebuffsActiveToday() { return todayHadDebuffsActive; }
+    public List<String> getTodayConsumablesBought() { return List.copyOf(todayConsumablesBought); }
+    public Set<String> getTodayCompletedQuestIds() { return Set.copyOf(todayCompletedQuestIds); }
+    public Map<QuestRank, Integer> getTodayCompletedQuestsCount() { return Map.copyOf(todayCompletedQuestsCount); }
+
+    /**
+     * Restaura los acumuladores del día en curso al cargar partida (persistencia intra-día).
+     * Sin esto, al reabrir la app el mismo día la checklist vuelve a 0/7 y se podrían re-cobrar
+     * recompensas (double-dip). El cierre automático de día se encarga de resetearlos en el rollover.
+     */
+    public void restoreDailyState(int pagesRead, double careerHours, int minHP,
+                                  boolean debuffsActive, boolean junkConsumed,
+                                  boolean perfectDayAchieved, boolean burnoutOccurred,
+                                  List<String> consumablesBought, Set<String> completedQuestIds,
+                                  Map<QuestRank, Integer> completedQuestsCount) {
+        this.todayPagesRead = pagesRead;
+        this.todayCareerHours = careerHours;
+        this.todayMinHP = minHP;
+        this.todayHadDebuffsActive = debuffsActive;
+        this.todayJunkConsumed = junkConsumed;
+        this.perfectDayAchievedToday = perfectDayAchieved;
+        this.burnoutOccurredToday = burnoutOccurred;
+        this.todayConsumablesBought.clear();
+        if (consumablesBought != null) this.todayConsumablesBought.addAll(consumablesBought);
+        this.todayCompletedQuestIds.clear();
+        if (completedQuestIds != null) this.todayCompletedQuestIds.addAll(completedQuestIds);
+        this.todayCompletedQuestsCount.clear();
+        if (completedQuestsCount != null) this.todayCompletedQuestsCount.putAll(completedQuestsCount);
+    }
+
     public boolean hasManualConfirmation(String id) { return manualConfirmations.contains(id); }
     public void setManualConfirmation(String id, boolean v) {
         if(v) manualConfirmations.add(id); else manualConfirmations.remove(id);
