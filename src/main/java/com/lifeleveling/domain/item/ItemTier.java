@@ -18,6 +18,10 @@ public enum ItemTier {
         return playerLevel >= minLevel;
     }
 
+    public int getMinLevel() {
+        return minLevel;
+    }
+
     // [NUEVO] Necesario para mostrar el nombre en los logs de Milestones
     public String getName() {
         return name;

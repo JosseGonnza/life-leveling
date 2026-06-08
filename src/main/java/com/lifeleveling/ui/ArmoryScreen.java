@@ -8,6 +8,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -87,13 +88,17 @@ final class ArmoryScreen {
         Label price = new Label("🪙 " + UiKit.num(item.price()) + " G");
         price.getStyleClass().add("price");
 
-        Button buy = new Button("Comprar");
+        Button buy = new Button(item.unlocked() ? "Comprar" : "🔒 Nivel " + item.requiredLevel());
         buy.getStyleClass().add("nav-btn");
-        buy.setDisable(!item.affordable());
-        buy.setOnAction(e -> { facade.buy(item.id()); refresh.run(); });
+        buy.setDisable(!item.unlocked() || !item.affordable());
+        if (item.unlocked()) {
+            buy.setOnAction(e -> { facade.buy(item.id()); refresh.run(); });
+        } else {
+            buy.setTooltip(new Tooltip("Requiere nivel " + item.requiredLevel()));
+        }
 
         VBox card = new VBox(4, name, effect, UiKit.spacer(2), price, buy);
-        card.getStyleClass().add(item.affordable() ? "shop-card" : "shop-card-locked");
+        card.getStyleClass().add(item.unlocked() && item.affordable() ? "shop-card" : "shop-card-locked");
         return card;
     }
 

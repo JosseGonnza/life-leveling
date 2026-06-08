@@ -34,6 +34,21 @@ class ArmoryTitlesReadModelsTest {
     }
 
     @Test
+    @DisplayName("shopCatalog: a nivel 1 el equipo por tier está bloqueado y los consumibles libres")
+    void shopCatalogTierLock() {
+        GameFacade f = newFacade(); // nivel 1
+
+        var catalog = f.shopCatalog();
+        // Los consumibles (tier minLevel 0) siempre desbloqueados
+        assertTrue(catalog.stream().filter(i -> i.requiredLevel() == 0).allMatch(ShopItemView::unlocked),
+                "los consumibles deben estar desbloqueados a nivel 1");
+        // El equipamiento de tier (minLevel 10/20/40) bloqueado a nivel 1
+        assertTrue(catalog.stream().filter(i -> i.requiredLevel() >= 10).noneMatch(ShopItemView::unlocked),
+                "el equipo por tier debe estar bloqueado a nivel 1");
+        assertTrue(catalog.stream().anyMatch(i -> i.requiredLevel() == 10), "debe haber ítems de Tier 1 (nivel 10)");
+    }
+
+    @Test
     @DisplayName("inventory: comprar añade el ítem a lo poseído; el loadout arranca vacío")
     void inventoryReflectsPurchase() {
         GameFacade f = newFacade();

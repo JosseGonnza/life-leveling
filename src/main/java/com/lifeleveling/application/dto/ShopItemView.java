@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 /**
  * Read model de un ítem del catálogo para el modo SHOP de The Armory.
  * `affordable` ya viene calculado contra el oro actual (la UI tiñe en rojo si false).
+ * `unlocked`/`requiredLevel`: candado por nivel del tier (la UI muestra "🔒 Nivel X" si false).
  */
 public record ShopItemView(
         String id,
@@ -18,12 +19,15 @@ public record ShopItemView(
         String category,
         String slot,
         String effect,
-        boolean affordable
+        boolean affordable,
+        boolean unlocked,
+        int requiredLevel
 ) {
-    public static ShopItemView from(Item item, int gold) {
+    public static ShopItemView from(Item item, int gold, int playerLevel) {
         String slot = item.slot() == ItemSlot.NONE ? "—" : item.slot().getDisplayName();
         return new ShopItemView(item.id(), item.name(), item.price(),
-                item.category().getDisplayName(), slot, effect(item), item.price() <= gold);
+                item.category().getDisplayName(), slot, effect(item), item.price() <= gold,
+                item.tier().canEquip(playerLevel), item.tier().getMinLevel());
     }
 
     private static String effect(Item item) {

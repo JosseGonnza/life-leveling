@@ -264,8 +264,9 @@ public final class GameFacade {
 
     public List<ShopItemView> shopCatalog() {
         int gold = game().getCurrentGold();
+        int level = game().getLevel();
         return ItemCatalog.getShopInventory().stream()
-                .map(item -> ShopItemView.from(item, gold))
+                .map(item -> ShopItemView.from(item, gold, level))
                 .toList();
     }
 
