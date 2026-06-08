@@ -16,12 +16,15 @@ import com.lifeleveling.domain.player.Stats;
 import com.lifeleveling.domain.player.TemporaryBuffTracker;
 import com.lifeleveling.domain.player.Wallet;
 import com.lifeleveling.domain.quest.condition.GateTracker;
+import com.lifeleveling.domain.quest.daily.DailyQuestType;
 import com.lifeleveling.domain.quest.shared.QuestId;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.quest.shared.QuestStatus;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
 import com.lifeleveling.domain.quest.user.UserQuest;
 import com.lifeleveling.domain.quest.weekly.WeeklyManager;
+import com.lifeleveling.domain.quest.weekly.WeeklyQuest;
+import com.lifeleveling.domain.quest.weekly.WeeklyQuestType;
 import com.lifeleveling.domain.title.Title;
 import com.lifeleveling.domain.title.TitleInventory;
 import com.lifeleveling.domain.title.TitleType;
@@ -29,6 +32,7 @@ import com.lifeleveling.domain.title.TitleType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,6 +96,21 @@ final class PlayerSnapshotMapper {
                 new ArrayList<>(gt.getTodayConsumablesBought()),
                 new ArrayList<>(gt.getTodayCompletedQuestIds()), todayCounts);
 
+        WeeklyManager wm = p.getWeeklyManager();
+        List<PlayerSnapshot.WeeklyQuestSnap> weeklyQuests = new ArrayList<>();
+        for (WeeklyQuest q : wm.getActiveQuests()) {
+            weeklyQuests.add(new PlayerSnapshot.WeeklyQuestSnap(
+                    q.id().value().toString(), q.getType().name(), q.status().name(),
+                    q.getWeekStartDate().toString(), q.getCurrentProgress(), q.createdAt().toString(),
+                    q.getCompletedAt() == null ? null : q.getCompletedAt().toString()));
+        }
+        Map<String, List<String>> dailyCompletions = new LinkedHashMap<>();
+        wm.getDailyCompletions().forEach((date, set) ->
+                dailyCompletions.put(date.toString(), set.stream().map(Enum::name).toList()));
+        PlayerSnapshot.WeeklySnap weekly = new PlayerSnapshot.WeeklySnap(
+                weeklyQuests, wm.getLastResetDate() == null ? null : wm.getLastResetDate().toString(),
+                dailyCompletions, wm.getPerfectDaysThisWeek());
+
         CareerEngine ce = p.getCareerEngine();
         return new PlayerSnapshot(
                 p.getId().toString(), p.getName(), p.getCurrentHP(), p.getCurrentRank().name(),
@@ -102,7 +121,7 @@ final class PlayerSnapshotMapper {
                 gt.getPerfectDayStreak(), gt.getMaxPerfectDayStreak(),
                 burnout,
                 p.getLastActiveDate() == null ? null : p.getLastActiveDate().toString(),
-                today);
+                today, weekly);
     }
 
     static Player toDomain(PlayerSnapshot s) {
@@ -157,12 +176,14 @@ final class PlayerSnapshotMapper {
                 UUID.fromString(s.burnout().id()), Instant.parse(s.burnout().triggeredAt()),
                 Instant.parse(s.burnout().expiresAt()));
 
+        WeeklyManager weeklyManager = toWeeklyManager(s.weekly());
+
         Player player = Player.restore(
                 UUID.fromString(s.id()), s.name(), s.currentHP(), PlayerRank.valueOf(s.rank()),
                 stats, Wallet.of(s.gold()), s.generalXP(), inventory, titleInventory,
                 new DebuffTracker(), new TemporaryBuffTracker(), gateTracker,
                 new CareerEngine(s.careerHours(), s.careerFlowSessions(), s.careerSessions()),
-                new MilestoneTracker(milestones), new WeeklyManager(), lock);
+                new MilestoneTracker(milestones), weeklyManager, lock);
 
         for (PlayerSnapshot.QuestSnap q : s.activeQuests()) {
             player.addUserQuest(UserQuest.reconstitute(
@@ -178,6 +199,26 @@ final class PlayerSnapshotMapper {
         }
 
         return player;
+    }
+
+    private static WeeklyManager toWeeklyManager(PlayerSnapshot.WeeklySnap snap) {
+        if (snap == null) return new WeeklyManager();
+
+        List<WeeklyQuest> quests = new ArrayList<>();
+        for (PlayerSnapshot.WeeklyQuestSnap q : snap.quests()) {
+            quests.add(WeeklyQuest.reconstitute(
+                    QuestId.from(q.id()), WeeklyQuestType.valueOf(q.type()), QuestStatus.valueOf(q.status()),
+                    LocalDate.parse(q.weekStartDate()), q.progress(), Instant.parse(q.createdAt()),
+                    q.completedAt() == null ? null : Instant.parse(q.completedAt())));
+        }
+        Map<LocalDate, Set<DailyQuestType>> dailyCompletions = new HashMap<>();
+        snap.dailyCompletions().forEach((date, names) -> {
+            Set<DailyQuestType> habits = new HashSet<>();
+            names.forEach(n -> habits.add(DailyQuestType.valueOf(n)));
+            dailyCompletions.put(LocalDate.parse(date), habits);
+        });
+        LocalDate lastReset = snap.lastResetDate() == null ? null : LocalDate.parse(snap.lastResetDate());
+        return new WeeklyManager(quests, lastReset, dailyCompletions, snap.perfectDaysThisWeek());
     }
 
     private PlayerSnapshotMapper() {}

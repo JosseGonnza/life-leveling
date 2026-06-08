@@ -7,6 +7,7 @@ import com.lifeleveling.application.dto.PlayerView;
 import com.lifeleveling.application.dto.QuestView;
 import com.lifeleveling.application.dto.ShopItemView;
 import com.lifeleveling.application.dto.TitlesView;
+import com.lifeleveling.application.dto.WeeklyQuestView;
 import com.lifeleveling.domain.item.ItemCatalog;
 import com.lifeleveling.domain.title.TitleType;
 import com.lifeleveling.application.port.Clock;
@@ -61,6 +62,7 @@ public final class GameFacade {
     public PlayerView newGame(String name) {
         this.current = Player.create(name);
         wireEvents();
+        ensureWeeklies();
         persist();
         return state();
     }
@@ -70,9 +72,19 @@ public final class GameFacade {
         loaded.ifPresent(p -> {
             this.current = p;
             wireEvents();
+            ensureWeeklies();
             catchUpDay();
         });
         return loaded.isPresent();
+    }
+
+    /**
+     * Garantiza que existan las Weekly Quests de la semana en curso. Idempotente dentro de la misma
+     * semana: si ya están generadas no hace nada; si faltan (partida nueva o save sin semanales) las
+     * crea sin esperar al lunes (el pool es determinista por semana).
+     */
+    private void ensureWeeklies() {
+        current.getWeeklyManager().performWeeklyReset(clock.today());
     }
 
     /**
@@ -158,6 +170,13 @@ public final class GameFacade {
 
     public List<QuestView> activeQuests() {
         return game().getActiveUserQuests().stream().map(QuestView::from).toList();
+    }
+
+    public List<WeeklyQuestView> weeklyQuests() {
+        LocalDate today = clock.today();
+        return game().getWeeklyManager().getActiveQuests().stream()
+                .map(q -> WeeklyQuestView.from(q, today))
+                .toList();
     }
 
     public PlayerView completeQuest(String questId) {

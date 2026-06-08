@@ -33,7 +33,8 @@ public record PlayerSnapshot(
         int maxPerfectDayStreak,
         BurnoutSnap burnout,
         String lastActiveDate,
-        TodaySnap today
+        TodaySnap today,
+        WeeklySnap weekly
 ) {
     public record StatSnap(String type, int level, int xp) {}
 
@@ -53,4 +54,11 @@ public record PlayerSnapshot(
                             boolean junkConsumed, boolean perfectDayAchieved, boolean burnoutOccurred,
                             List<String> consumablesBought, List<String> completedQuestIds,
                             Map<String, Integer> completedQuestsCount) {}
+
+    /** Estado del WeeklyManager: misiones semanales activas + progreso de la semana. */
+    public record WeeklySnap(List<WeeklyQuestSnap> quests, String lastResetDate,
+                             Map<String, List<String>> dailyCompletions, int perfectDaysThisWeek) {}
+
+    public record WeeklyQuestSnap(String id, String type, String status, String weekStartDate,
+                                  int progress, String createdAt, String completedAt) {}
 }

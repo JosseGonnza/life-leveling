@@ -2,6 +2,7 @@ package com.lifeleveling.ui;
 
 import com.lifeleveling.application.GameFacade;
 import com.lifeleveling.application.dto.QuestView;
+import com.lifeleveling.application.dto.WeeklyQuestView;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 
 import javafx.geometry.Pos;
@@ -54,9 +55,48 @@ final class QuestsScreen {
         Label title = new Label("MISIONES — CONTRATOS");
         title.getStyleClass().add("screen-title");
 
-        VBox root = new VBox(10, title, middle, createForm(facade, nav), backBar(nav));
+        VBox root = new VBox(10, title, weeklySection(facade), middle, createForm(facade, nav), backBar(nav));
         root.getStyleClass().add("screen");
         return root;
+    }
+
+    private static Region weeklySection(GameFacade facade) {
+        List<WeeklyQuestView> weeklies = facade.weeklyQuests();
+        long done = weeklies.stream().filter(WeeklyQuestView::completed).count();
+
+        VBox box = new VBox(8, UiKit.sectionTitle("MISIONES SEMANALES   " + done + "/" + weeklies.size()));
+        if (weeklies.isEmpty()) {
+            box.getChildren().add(UiKit.muted("Sin semanales esta semana."));
+        }
+        HBox cards = new HBox(12);
+        for (WeeklyQuestView w : weeklies) {
+            Region card = weeklyCard(w);
+            HBox.setHgrow(card, Priority.ALWAYS);
+            cards.getChildren().add(card);
+        }
+        if (!weeklies.isEmpty()) box.getChildren().add(cards);
+        box.getStyleClass().add("panel");
+        return box;
+    }
+
+    private static Region weeklyCard(WeeklyQuestView w) {
+        Label name = new Label(w.name() + (w.completed() ? "  ✅" : ""));
+        name.getStyleClass().add("habit-done");
+        Label desc = UiKit.muted(w.description());
+        desc.setWrapText(true);
+
+        double pct = w.target() <= 0 ? 0 : (double) w.currentProgress() / w.target();
+        Region bar = UiKit.bar(pct, "bar-xp", 180);
+        Label progress = UiKit.muted(w.progressText());
+
+        String plazo = w.completed() ? "completada" : w.daysRemaining() + " días restantes";
+        HBox meta = new HBox(10, UiKit.caption("+" + UiKit.num(w.rewardXP()) + " XP"),
+                UiKit.hgrow(), UiKit.muted(plazo));
+
+        VBox card = new VBox(5, name, desc, bar, progress, meta);
+        card.getStyleClass().add("habit-row");
+        card.setMinWidth(220);
+        return card;
     }
 
     private static Region questRow(QuestView q, Consumer<QuestView> onSelect) {
@@ -77,8 +117,9 @@ final class QuestsScreen {
         name.getStyleClass().add("player-name");
         Label meta = UiKit.muted("Rango " + q.rank()
                 + (q.deadline() == null ? "  ·  sin plazo" : "  ·  vence " + q.deadline()));
-        Label reward = new Label("+" + UiKit.num(q.rewardXP()) + " XP     /     -" + q.penaltyHP() + " HP");
+        Label reward = new Label("Recompensa al completar:  +" + UiKit.num(q.rewardXP()) + " XP");
         reward.getStyleClass().add("reward-hint");
+        Label penalty = UiKit.muted("Si fallas o vence el plazo:  -" + q.penaltyHP() + " HP");
         Label desc = UiKit.muted(q.description() == null || q.description().isBlank()
                 ? "(sin descripción)" : q.description());
         desc.setWrapText(true);
@@ -91,7 +132,7 @@ final class QuestsScreen {
         HBox actions = new HBox(12, complete, UiKit.hgrow(), abandon);
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        return List.of(UiKit.sectionTitle("DETALLE"), name, meta, reward,
+        return List.of(UiKit.sectionTitle("DETALLE"), name, meta, reward, penalty,
                 UiKit.spacer(4), desc, UiKit.spacer(6), actions);
     }
 
@@ -123,7 +164,7 @@ final class QuestsScreen {
         hint.getStyleClass().add("reward-hint");
         Runnable refreshHint = () -> {
             QuestRank r = rank.getValue();
-            hint.setText("+" + r.getBaseXP() + " XP  /  -" + r.getMoralDamage() + " HP");
+            hint.setText("+" + r.getBaseXP() + " XP al completar  ·  -" + r.getMoralDamage() + " HP si fallas");
         };
         rank.valueProperty().addListener((o, a, b) -> refreshHint.run());
         refreshHint.run();

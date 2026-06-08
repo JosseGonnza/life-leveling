@@ -1,6 +1,7 @@
 package com.lifeleveling.infrastructure.persistence;
 
 import com.lifeleveling.application.GameFacade;
+import com.lifeleveling.application.dto.WeeklyQuestView;
 import com.lifeleveling.application.port.Clock;
 import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.infrastructure.time.SystemClock;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 
@@ -79,6 +81,36 @@ class PersistenceRoundTripTest {
         assertEquals(completed, f2.dailyChecklist().completedCount(), "la checklist del día se conserva");
         assertEquals(gold, f2.state().gold(), "no se re-aplican recompensas (sin double-dip)");
         assertEquals(days, f2.journal().daysLogged(), "no se ha cerrado ningún día al reabrir");
+    }
+
+    @Test
+    @DisplayName("Misiones semanales: aparecen en partida nueva y su progreso sobrevive al recargar")
+    void weeklyQuestsAppearAndPersist(@TempDir Path dir) {
+        Path save = dir.resolve("savegame.json");
+        Clock fixed = new FixedClock(LocalDate.of(2026, 6, 8));
+
+        GameFacade f1 = new GameFacade(new JsonPlayerRepository(save), fixed, e -> {});
+        f1.newGame("Jose");
+        assertEquals(3, f1.weeklyQuests().size(), "la partida nueva ya trae las 3 semanales");
+
+        // Actividad que alimenta varias semanales (horas, páginas, gym, sueño, dúo dieta+skincare).
+        f1.workCode(4);
+        f1.read(80);
+        f1.gym(true);
+        f1.diet(true);
+        f1.skincare(true);
+        f1.sleep(8);
+
+        List<String> names = f1.weeklyQuests().stream().map(WeeklyQuestView::name).toList();
+        int progress = f1.weeklyQuests().stream().mapToInt(WeeklyQuestView::currentProgress).sum();
+        assertTrue(progress > 0, "la actividad debió alimentar alguna semanal");
+
+        GameFacade f2 = new GameFacade(new JsonPlayerRepository(save), fixed, e -> {});
+        assertTrue(f2.loadGame());
+
+        assertEquals(names, f2.weeklyQuests().stream().map(WeeklyQuestView::name).toList(), "mismas semanales");
+        assertEquals(progress, f2.weeklyQuests().stream().mapToInt(WeeklyQuestView::currentProgress).sum(),
+                "el progreso semanal se conserva al recargar");
     }
 
     private record FixedClock(LocalDate date) implements Clock {
