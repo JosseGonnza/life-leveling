@@ -7,6 +7,7 @@ import com.lifeleveling.domain.quest.condition.GateTracker;
 import com.lifeleveling.domain.quest.system.GateService;
 import com.lifeleveling.domain.quest.system.GateVerificationResult;
 import com.lifeleveling.domain.quest.system.SystemQuestType;
+import com.lifeleveling.domain.quest.user.UserQuest;
 
 import java.time.LocalDate;
 import java.util.EnumSet;
@@ -35,13 +36,32 @@ public final class DayService {
 
     public void endDay(Player player) {
         player.updateState(clock.now());
+        failExpiredQuests(player);
         evaluateGateTriggers(player);
     }
 
     /** Cierre archivando el día bajo {@code closingDate} (cierre automático Opción A: el día real trabajado). */
     public void endDay(Player player, LocalDate closingDate) {
         player.updateState(clock.now(), closingDate);
+        failExpiredQuests(player);
         evaluateGateTriggers(player);
+    }
+
+    /**
+     * Falla las User Quests cuyo plazo ya venció (deadline anterior a HOY): aplica su penalización
+     * de HP, las pasa al historial y avisa. Se compara contra el día real ({@code clock.today()}),
+     * no contra la fecha de archivado, para que el cierre automático perdone huecos pero sí caduque
+     * lo realmente vencido.
+     */
+    private void failExpiredQuests(Player player) {
+        LocalDate today = clock.today();
+        for (UserQuest quest : player.getActiveUserQuests()) {
+            if (quest.getDeadline() != null && quest.getDeadline().isBefore(today)) {
+                int hpDamage = quest.rank().getMoralDamage();
+                player.applyUserQuestFailure(quest, clock.now());
+                player.getEventPublisher().publish(GameEvent.questFailed(quest.name(), hpDamage));
+            }
+        }
     }
 
     private void evaluateGateTriggers(Player player) {

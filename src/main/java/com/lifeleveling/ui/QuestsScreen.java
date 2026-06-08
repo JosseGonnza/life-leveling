@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -51,7 +52,14 @@ final class QuestsScreen {
         };
         render[0].run();
 
-        VBox root = new VBox(10, title, weeklySection(facade), tabs, content, backBar(nav));
+        VBox middle = new VBox(10, weeklySection(facade), tabs, content);
+        ScrollPane scroll = new ScrollPane(middle);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("screen-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        VBox root = new VBox(10, title, scroll, backBar(nav));
         root.getStyleClass().add("screen");
         return root;
     }
