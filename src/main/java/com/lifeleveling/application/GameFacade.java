@@ -174,11 +174,18 @@ public final class GameFacade {
     }
 
     public List<QuestView> activeQuests() {
-        return game().getActiveUserQuests().stream().map(QuestView::from).toList();
+        var state = game().getHpState();
+        return game().getActiveUserQuests().stream().map(q -> QuestView.from(q, state)).toList();
     }
 
     public List<QuestView> questHistory() {
-        return game().getQuestHistory().stream().map(QuestView::from).toList();
+        var state = game().getHpState();
+        return game().getQuestHistory().stream().map(q -> QuestView.from(q, state)).toList();
+    }
+
+    /** Si el estado de HP actual permite acometer una misión de este rango (Biblia: Cansado bloquea B+). */
+    public boolean canAttemptRank(QuestRank rank) {
+        return rank.canStartWith(game().getHpState());
     }
 
     public List<WeeklyQuestView> weeklyQuests() {

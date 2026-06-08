@@ -18,7 +18,9 @@ public record PlayerView(
         String rank,
         String rankLetter,
         double salaryMultiplier,
-        StatsView stats
+        StatsView stats,
+        boolean burnout,
+        boolean highRankLocked
 ) {
     public static PlayerView from(Player p) {
         int level = p.getLevel();
@@ -40,7 +42,9 @@ public record PlayerView(
                 p.getCurrentRank().getDisplayName(),
                 p.getCurrentRank().getLetter(),
                 p.getCurrentRank().getGoldMultiplier(),
-                StatsView.from(p.getEffectiveStats())
+                StatsView.from(p.getEffectiveStats()),
+                p.getHpState().isBurnout(),
+                !p.getHpState().canStartHighRankQuests()
         );
     }
 }

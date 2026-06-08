@@ -10,6 +10,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -86,8 +87,14 @@ final class GatesScreen {
         reward.getStyleClass().add("reward-hint");
 
         Label result = UiKit.muted("");
+        boolean tiredLocked = facade.state().highRankLocked();
         Button challenge = new Button("⛩  ABRIR PORTAL");
         challenge.getStyleClass().add("continue-btn");
+        challenge.setDisable(tiredLocked);
+        if (tiredLocked) {
+            challenge.setTooltip(new Tooltip("Demasiado cansado para desafiar un Portal (HP bajo)"));
+            result.setText("⚠️ Demasiado cansado: recupera HP para desafiar el Portal.");
+        }
         challenge.setOnAction(e -> {
             GateVerificationResult r = facade.challengeGate();
             if (r.success()) nav.gates();

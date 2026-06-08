@@ -4,7 +4,9 @@ import com.lifeleveling.application.dto.InventoryView;
 import com.lifeleveling.application.dto.ElderQuestView;
 import com.lifeleveling.application.dto.ShopItemView;
 import com.lifeleveling.application.dto.TitlesView;
+import com.lifeleveling.application.dto.QuestView;
 import com.lifeleveling.application.dto.TreasureView;
+import com.lifeleveling.domain.quest.shared.QuestRank;
 import com.lifeleveling.domain.title.TitleType;
 import com.lifeleveling.infrastructure.persistence.InMemoryPlayerRepository;
 import com.lifeleveling.infrastructure.time.SystemClock;
@@ -96,6 +98,20 @@ class ArmoryTitlesReadModelsTest {
         assertTrue(elders.stream().allMatch(e -> !e.reward().isBlank()), "cada Juicio muestra recompensa");
         // Nota: algunas condiciones de abstinencia/racha dan `completed` vacuosamente sin el ciclo de
         // temporada (Judgment Day) — comportamiento del endgame aún no cableado, no se asierta aquí.
+    }
+
+    @Test
+    @DisplayName("estado HP: jugador sano sin bloqueos; canAttemptRank permite todos los rangos")
+    void healthyStateNoLocks() {
+        GameFacade f = newFacade();
+
+        var s = f.state();
+        assertFalse(s.burnout(), "jugador nuevo no está en burnout");
+        assertFalse(s.highRankLocked(), "jugador sano no tiene bloqueo de alto rango");
+        for (QuestRank r : QuestRank.values()) {
+            assertTrue(f.canAttemptRank(r), "estado sano permite el rango " + r.getLetter());
+        }
+        assertTrue(f.activeQuests().stream().allMatch(QuestView::playableNow));
     }
 
     @Test

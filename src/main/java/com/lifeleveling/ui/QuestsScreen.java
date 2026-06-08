@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -52,7 +53,10 @@ final class QuestsScreen {
         };
         render[0].run();
 
-        VBox middle = new VBox(10, weeklySection(facade), tabs, content);
+        VBox middle = new VBox(10);
+        Region banner = stateBanner(facade);
+        if (banner != null) middle.getChildren().add(banner);
+        middle.getChildren().addAll(weeklySection(facade), tabs, content);
         ScrollPane scroll = new ScrollPane(middle);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -62,6 +66,18 @@ final class QuestsScreen {
         VBox root = new VBox(10, title, scroll, backBar(nav));
         root.getStyleClass().add("screen");
         return root;
+    }
+
+    private static Region stateBanner(GameFacade facade) {
+        var s = facade.state();
+        String msg;
+        if (s.burnout()) msg = "💀 BURNOUT — Solo puedes acometer misiones de Rango E/D hasta recuperar HP.";
+        else if (s.highRankLocked()) msg = "⚠️ CANSADO — Bloqueadas las misiones de Rango B o superior (recupera HP).";
+        else return null;
+        Label l = new Label(msg);
+        l.getStyleClass().add("check-pending");
+        l.setWrapText(true);
+        return l;
     }
 
     private static Region tabContent(String tab, GameFacade facade, Nav nav) {
@@ -194,7 +210,12 @@ final class QuestsScreen {
 
         Button complete = new Button("COMPLETAR");
         complete.getStyleClass().add("continue-btn");
-        complete.setOnAction(e -> { facade.completeQuest(q.id()); nav.quests(); });
+        if (q.playableNow()) {
+            complete.setOnAction(e -> { facade.completeQuest(q.id()); nav.quests(); });
+        } else {
+            complete.setDisable(true);
+            complete.setTooltip(new Tooltip("Demasiado cansado para completar una misión de Rango " + q.rank()));
+        }
         Button abandon = UiKit.navButton("Abandonar", () -> { facade.failQuest(q.id()); nav.quests(); });
 
         HBox actions = new HBox(12, complete, UiKit.hgrow(), abandon);
@@ -250,6 +271,15 @@ final class QuestsScreen {
             facade.createQuest(n, description.getText() == null ? "" : description.getText().trim(), rank.getValue(), dl);
             nav.quests();
         });
+
+        Runnable refreshCreateState = () -> {
+            boolean allowed = facade.canAttemptRank(rank.getValue());
+            create.setDisable(!allowed);
+            create.setTooltip(allowed ? null
+                    : new Tooltip("Demasiado cansado para iniciar una misión de Rango " + rank.getValue().getLetter()));
+        };
+        rank.valueProperty().addListener((o, a, b) -> refreshCreateState.run());
+        refreshCreateState.run();
 
         HBox line1 = new HBox(10, name, description);
         HBox line2 = new HBox(10, rank, deadline, hint, UiKit.hgrow(), create);
