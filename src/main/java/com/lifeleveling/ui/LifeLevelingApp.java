@@ -81,15 +81,23 @@ public final class LifeLevelingApp extends Application {
         this.stage = stage;
         facade = new GameFacade(new JsonPlayerRepository(savePath()), new SystemClock(),
                 e -> System.out.println("⟦SYSTEM⟧ " + e.message()));
-        if (!facade.loadGame()) {
-            facade.newGame("Jose");
+
+        boolean hasGame = facade.loadGame();
+        // QA: los hooks de dev (LL_SCREEN/LL_HP) necesitan una partida; si no hay save, sembramos una.
+        if (!hasGame && System.getenv("LL_SCREEN") != null) {
+            facade.newGame("Cazador");
+            hasGame = true;
         }
-        applyHpOverride();
 
         shell = new BorderPane();
         shell.getStyleClass().add("app-root");
         shell.setTop(titleBar());
-        nav.home();
+        if (hasGame) {
+            applyHpOverride();
+            nav.home();
+        } else {
+            shell.setCenter(NewGameScreen.build(facade, nav));
+        }
 
         javafx.geometry.Rectangle2D screen = javafx.stage.Screen.getPrimary().getVisualBounds();
         double w = Math.max(940, screen.getWidth() * 0.75);
