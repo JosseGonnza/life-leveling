@@ -56,7 +56,7 @@ public enum HPState {
 
     public String getDisplayName() {
         return switch (this) {
-            case CRITICAL -> "Crítico";
+            case CRITICAL -> "Burnout";
             case TIRED -> "Cansado";
             case HEALTHY -> "Saludable";
         };
