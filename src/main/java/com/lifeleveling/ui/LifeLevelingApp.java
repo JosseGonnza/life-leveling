@@ -39,17 +39,42 @@ public final class LifeLevelingApp extends Application {
     private double xOffset, yOffset;
 
     private final Nav nav = new Nav() {
-        @Override public void home() { shell.setCenter(HomeScreen.build(facade, this)); }
-        @Override public void daily() { shell.setCenter(DailyTasksScreen.build(facade, this)); }
-        @Override public void quests() { shell.setCenter(QuestsScreen.build(facade, this)); }
-        @Override public void gates() { shell.setCenter(GatesScreen.build(facade, this)); }
-        @Override public void armory() { shell.setCenter(ArmoryScreen.build(facade, this)); }
-        @Override public void titles() { shell.setCenter(HallOfFameScreen.build(facade, this)); }
-        @Override public void journal() { shell.setCenter(JournalScreen.build(facade, this)); }
-        @Override public void treasures() { shell.setCenter(TreasuresScreen.build(facade, this)); }
-        @Override public void judgments() { shell.setCenter(JudgmentsScreen.build(facade, this)); }
+        @Override public void home() { show(HomeScreen.build(facade, this)); }
+        @Override public void daily() { show(DailyTasksScreen.build(facade, this)); }
+        @Override public void armory() { show(ArmoryScreen.build(facade, this)); }
+        @Override public void quests() { if (denyDuringBurnout()) return; show(QuestsScreen.build(facade, this)); }
+        @Override public void gates() { if (denyDuringBurnout()) return; show(GatesScreen.build(facade, this)); }
+        @Override public void titles() { if (denyDuringBurnout()) return; show(HallOfFameScreen.build(facade, this)); }
+        @Override public void journal() { if (denyDuringBurnout()) return; show(JournalScreen.build(facade, this)); }
+        @Override public void treasures() { if (denyDuringBurnout()) return; show(TreasuresScreen.build(facade, this)); }
+        @Override public void judgments() { if (denyDuringBurnout()) return; show(JudgmentsScreen.build(facade, this)); }
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
+
+    /** Pinta la pantalla en el centro y aplica el tema según el estado (gris si Burnout). */
+    private void show(Region center) {
+        shell.setCenter(center);
+        applyBurnoutTheme();
+    }
+
+    /** En Burnout solo se permiten Home, Daily (descanso) y Armería (curas). El resto se deniega. */
+    private boolean denyDuringBurnout() {
+        if (!facade.state().burnout()) return false;
+        System.out.println("⟦SYSTEM⟧ Bloqueado por Burnout: solo puedes descansar y curarte.");
+        nav.home();
+        return true;
+    }
+
+    /** Tema BURNOUT: desatura toda la interfaz a escala de grises (Biblia 1.5: El Colapso). */
+    private void applyBurnoutTheme() {
+        if (facade.state().burnout()) {
+            javafx.scene.effect.ColorAdjust grayscale = new javafx.scene.effect.ColorAdjust();
+            grayscale.setSaturation(-1.0);
+            shell.setEffect(grayscale);
+        } else {
+            shell.setEffect(null);
+        }
+    }
 
     @Override
     public void start(Stage stage) {

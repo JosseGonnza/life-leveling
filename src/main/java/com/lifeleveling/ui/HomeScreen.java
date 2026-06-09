@@ -27,9 +27,23 @@ final class HomeScreen {
         columns.getStyleClass().add("columns");
         VBox.setVgrow(columns, Priority.ALWAYS);
 
-        VBox root = new VBox(columns, bottomBar(p, nav));
+        VBox root = new VBox();
         root.getStyleClass().add("home");
+        if (p.burnout()) root.getChildren().add(burnoutBanner());
+        root.getChildren().addAll(columns, bottomBar(p, nav));
         return root;
+    }
+
+    private static Region burnoutBanner() {
+        Label title = new Label("💔 BURNOUT — LOCKDOWN ACTIVO");
+        title.getStyleClass().add("burnout-banner-title");
+        Label text = new Label("Has colapsado. Solo puedes descansar (SUEÑO/DIETA/CUIDADOS), "
+                + "ver tu estado y comprar curas. El resto del sistema está bloqueado 24h.");
+        text.setWrapText(true);
+        text.getStyleClass().add("burnout-banner-text");
+        VBox box = new VBox(4, title, text);
+        box.getStyleClass().add("burnout-banner");
+        return box;
     }
 
     private static Region statusColumn(PlayerView p) {
@@ -96,11 +110,12 @@ final class HomeScreen {
     }
 
     private static Region bottomBar(PlayerView p, Nav nav) {
+        boolean burnout = p.burnout();
         HBox left = new HBox(10,
-                UiKit.navButton("Misiones", nav::quests),
-                UiKit.navButton("Portales", nav::gates),
+                locked(UiKit.navButton("Misiones", nav::quests), burnout),
+                locked(UiKit.navButton("Portales", nav::gates), burnout),
                 UiKit.navButton("Armería", nav::armory),
-                UiKit.navButton("Tesoros", nav::treasures));
+                locked(UiKit.navButton("Tesoros", nav::treasures), burnout));
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button cont = new Button("REGISTRAR HÁBITOS  ▸");
@@ -108,9 +123,9 @@ final class HomeScreen {
         cont.setOnAction(e -> nav.daily());
 
         HBox right = new HBox(10,
-                UiKit.navButton("Juicios", nav::judgments),
-                UiKit.navButton("Hall of Fame", nav::titles),
-                UiKit.navButton("Diario", nav::journal));
+                locked(UiKit.navButton("Juicios", nav::judgments), burnout),
+                locked(UiKit.navButton("Hall of Fame", nav::titles), burnout),
+                locked(UiKit.navButton("Diario", nav::journal), burnout));
         Label gold = new Label("🪙 " + UiKit.num(p.gold()) + " G");
         gold.getStyleClass().add("gold");
 
@@ -118,6 +133,12 @@ final class HomeScreen {
         bar.setAlignment(Pos.CENTER);
         bar.getStyleClass().add("bottom-bar");
         return bar;
+    }
+
+    /** Deshabilita un botón de navegación bloqueado durante el Burnout (Biblia 1.5 FASE 2). */
+    private static Button locked(Button b, boolean burnout) {
+        if (burnout) b.setDisable(true);
+        return b;
     }
 
     private HomeScreen() {}

@@ -1,6 +1,8 @@
 package com.lifeleveling.application.dto;
 
 import com.lifeleveling.domain.item.Item;
+import com.lifeleveling.domain.item.ItemCatalog;
+import com.lifeleveling.domain.item.ItemCategory;
 import com.lifeleveling.domain.item.ItemSlot;
 import com.lifeleveling.domain.player.StatType;
 
@@ -21,13 +23,20 @@ public record ShopItemView(
         String effect,
         boolean affordable,
         boolean unlocked,
-        int requiredLevel
+        int requiredLevel,
+        boolean burnoutSafe
 ) {
     public static ShopItemView from(Item item, int gold, int playerLevel) {
         String slot = item.slot() == ItemSlot.NONE ? "—" : item.slot().getDisplayName();
         return new ShopItemView(item.id(), item.name(), item.price(),
                 item.category().getDisplayName(), slot, effect(item), item.price() <= gold,
-                item.tier().canEquip(playerLevel), item.tier().getMinLevel());
+                item.tier().canEquip(playerLevel), item.tier().getMinLevel(), burnoutSafe(item));
+    }
+
+    /** Comprable durante el Burnout: curas (MEDICINE) + los items de salida rápida (Escapada Fin de Semana). */
+    private static boolean burnoutSafe(Item item) {
+        return item.category() == ItemCategory.MEDICINE
+                || item.id().equals(ItemCatalog.WEEKEND_TRIP.id());
     }
 
     private static String effect(Item item) {

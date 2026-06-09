@@ -63,10 +63,21 @@ final class ArmoryScreen {
 
     // ---- Modo SHOP (agrupado por categoría) ----
     private static Region shopPane(GameFacade facade, Runnable refresh) {
+        boolean burnout = facade.state().burnout();
         VBox pane = new VBox(14, UiKit.muted("🪙 " + UiKit.num(facade.state().gold()) + " G disponible"));
+
+        if (burnout) {
+            Label note = new Label("💔 BURNOUT: la tienda solo despacha curas y la vía de salida rápida.");
+            note.setWrapText(true);
+            note.getStyleClass().add("burnout-banner-text");
+            VBox banner = new VBox(note);
+            banner.getStyleClass().add("burnout-banner");
+            pane.getChildren().add(banner);
+        }
 
         java.util.Map<String, java.util.List<ShopItemView>> byCategory = new java.util.LinkedHashMap<>();
         for (ShopItemView item : facade.shopCatalog()) {
+            if (burnout && !item.burnoutSafe()) continue;
             byCategory.computeIfAbsent(item.category(), k -> new java.util.ArrayList<>()).add(item);
         }
         for (var entry : byCategory.entrySet()) {

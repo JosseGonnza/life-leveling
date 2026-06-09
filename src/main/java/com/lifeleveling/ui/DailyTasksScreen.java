@@ -26,15 +26,18 @@ import java.util.Set;
 final class DailyTasksScreen {
 
     private static final Set<String> NUMERIC = Set.of("SLEEP", "CODE", "READ");
+    /** Durante el Burnout solo se permite descansar y cuidarse (Biblia 1.5 FASE 2). */
+    private static final Set<String> BURNOUT_ALLOWED = Set.of("SLEEP", "DIET", "SKINCARE");
 
     static Region build(GameFacade facade, Nav nav) {
         DailyChecklistView checklist = facade.dailyChecklist();
+        boolean burnout = facade.state().burnout();
         Map<String, TextField> fields = new HashMap<>();
         Map<String, CheckBox> checks = new HashMap<>();
 
         VBox list = new VBox(8);
         for (DailyChecklistView.Habit h : checklist.habits()) {
-            list.getChildren().add(row(h, fields, checks));
+            list.getChildren().add(row(h, fields, checks, burnout));
         }
         list.getStyleClass().add("panel");
         VBox.setVgrow(list, Priority.ALWAYS);
@@ -42,6 +45,17 @@ final class DailyTasksScreen {
         Label title = new Label("TAREAS DEL SISTEMA — HOY");
         title.getStyleClass().add("screen-title");
         Label progress = UiKit.muted(checklist.completedCount() + " / " + checklist.total() + " COMPLETADOS");
+
+        VBox header = new VBox(6, title, progress);
+        if (burnout) {
+            Label note = new Label("💔 BURNOUT: solo puedes registrar SUEÑO, DIETA y CUIDADOS. "
+                    + "El esfuerzo (Código/Lectura/Gimnasio/Orden) está bloqueado.");
+            note.setWrapText(true);
+            note.getStyleClass().add("burnout-banner-text");
+            VBox banner = new VBox(note);
+            banner.getStyleClass().add("burnout-banner");
+            header.getChildren().add(banner);
+        }
 
         Button back = UiKit.navButton("◂ Volver", nav::home);
         Button confirm = new Button("CONFIRMAR CAMBIOS");
@@ -54,16 +68,28 @@ final class DailyTasksScreen {
         actions.setAlignment(Pos.CENTER);
         actions.getStyleClass().add("bottom-bar");
 
-        VBox root = new VBox(6, title, progress, UiKit.spacer(6), list, actions);
+        VBox root = new VBox(6, header, UiKit.spacer(6), list, actions);
         root.getStyleClass().add("screen");
         return root;
     }
 
-    private static Region row(DailyChecklistView.Habit h, Map<String, TextField> fields, Map<String, CheckBox> checks) {
+    private static Region row(DailyChecklistView.Habit h, Map<String, TextField> fields,
+                              Map<String, CheckBox> checks, boolean burnout) {
         Label label = new Label(h.label());
-        label.getStyleClass().add(h.done() ? "habit-done" : "habit-pending");
 
         Region control;
+        if (burnout && !BURNOUT_ALLOWED.contains(h.code()) && !h.done()) {
+            label.getStyleClass().add("habit-locked");
+            Label lock = new Label("🔒 bloqueado");
+            lock.getStyleClass().add("lock-note");
+            control = lock;
+            HBox row = new HBox(label, UiKit.hgrow(), control);
+            row.getStyleClass().add("habit-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+            return row;
+        }
+
+        label.getStyleClass().add(h.done() ? "habit-done" : "habit-pending");
         if (h.done()) {
             Label mark = new Label("✔ HECHO");
             mark.getStyleClass().add("check-done");
