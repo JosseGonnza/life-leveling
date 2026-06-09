@@ -106,6 +106,12 @@ public class GateService {
         // 4. Entregar recompensas (respeta rewardStat, p.ej. GATE 3 → INT XP)
         player.applyQuestReward(gate.getBaseReward());
 
+        // Redemption restaura el HP por completo (Biblia 2.4.3: "+100 HP, lección aprendida").
+        // El canal de QuestReward no transporta HP, así que se aplica aquí explícitamente.
+        if (gate == SystemQuestType.GATE_REDEMPTION) {
+            player.heal(100);
+        }
+
         System.out.println("⛩️ GATE COMPLETADA: " + gate.getName());
         if (gate.getRankUnlocked() != null) {
             System.out.println("   Rank Up: " + gate.getRankUnlocked());

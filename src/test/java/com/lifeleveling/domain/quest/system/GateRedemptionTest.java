@@ -44,6 +44,24 @@ class GateRedemptionTest {
         assertTrue(r.success(), "caído (3 burnouts) + HP>80 14 días → disponible");
     }
 
+    @Test
+    @DisplayName("Completar Redemption restaura el HP a 100 (+1.000 XP) (Biblia 2.4.3)")
+    void completingRedemptionHealsToFull() {
+        Player player = Player.create("Jose");
+        GateTracker tracker = player.getGateTracker();
+        LocalDate today = LocalDate.now();
+        for (int i = 20; i <= 22; i++) {
+            tracker.addDailyHistory(burnoutDay(today.minusDays(i)));
+        }
+        player.takeDamage(60);
+        assertTrue(player.getCurrentHP() < 100, "precondición: HP mermado");
+
+        GateVerificationResult r = gates.attemptGate(player, SystemQuestType.GATE_REDEMPTION);
+
+        assertTrue(r.success(), "debe completarse");
+        assertEquals(100, player.getCurrentHP(), "Redemption restaura el HP a tope");
+    }
+
     private GateTracker.DailyHistory burnoutDay(LocalDate date) {
         return new GateTracker.DailyHistory(
                 date, false, 0, 0, 0.0, true, false,
