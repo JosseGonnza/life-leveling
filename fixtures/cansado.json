@@ -1,0 +1,73 @@
+{
+  "id" : "7e29f4ea-ffb3-48db-b9a6-e7b29dcb299d",
+  "name" : "Cazador Agotado",
+  "currentHP" : 30,
+  "rank" : "C",
+  "generalXP" : 27000,
+  "gold" : 11500,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "INTELLECT",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "WISDOM",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "CHARISMA",
+    "level" : 21,
+    "xp" : 205
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ "SURVIVOR", "VETERAN", "EXPERT" ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ {
+    "id" : "cced82fe-5eec-4fa6-beb3-29c64261278a",
+    "name" : "Entregar proyecto",
+    "description" : "Sprint del cliente",
+    "rank" : "C",
+    "deadline" : "2026-06-14",
+    "status" : "PENDING",
+    "createdAt" : "2026-06-09T17:50:30.388143828Z",
+    "completedAt" : null,
+    "failedAt" : null
+  } ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ "LEVEL_20", "LEVEL_10", "LEVEL_30" ],
+  "gatesCompleted" : [ "GATE_E_TO_D", "GATE_D_TO_C" ],
+  "dailyHistory" : [ ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : null,
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 30,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ ],
+    "lastResetDate" : null,
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}

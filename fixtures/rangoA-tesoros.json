@@ -1,0 +1,87 @@
+{
+  "id" : "d08008bd-9932-4312-88b2-56688e8b1e6f",
+  "name" : "Cazador Senior",
+  "currentHP" : 100,
+  "rank" : "A",
+  "generalXP" : 91000,
+  "gold" : 158500,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 39,
+    "xp" : 389
+  }, {
+    "type" : "INTELLECT",
+    "level" : 39,
+    "xp" : 389
+  }, {
+    "type" : "WISDOM",
+    "level" : 39,
+    "xp" : 389
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 39,
+    "xp" : 389
+  }, {
+    "type" : "CHARISMA",
+    "level" : 39,
+    "xp" : 389
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ "VETERAN", "LEGEND", "SURVIVOR", "EXPERT", "MASTER" ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ "LEVEL_10", "LEVEL_40", "LEVEL_30", "LEVEL_20", "LEVEL_50" ],
+  "gatesCompleted" : [ "GATE_C_TO_C_PLUS", "GATE_D_TO_C", "GATE_E_TO_D", "GATE_B_TO_A", "GATE_C_PLUS_TO_B" ],
+  "dailyHistory" : [ ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : null,
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 100,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ {
+      "id" : "341e2aa9-357a-4556-b26b-a7465b666fd1",
+      "type" : "CODE_MARATHON",
+      "status" : "IN_PROGRESS",
+      "weekStartDate" : "2026-06-08",
+      "progress" : 0,
+      "createdAt" : "2026-06-09T17:51:32.674740734Z",
+      "completedAt" : null
+    }, {
+      "id" : "ef694ad1-61f7-489a-a83e-b3f01f1eba39",
+      "type" : "THE_STREAK",
+      "status" : "IN_PROGRESS",
+      "weekStartDate" : "2026-06-08",
+      "progress" : 0,
+      "createdAt" : "2026-06-09T17:51:32.674775028Z",
+      "completedAt" : null
+    }, {
+      "id" : "b2156d77-3787-46a3-93b7-0f3ec21f5230",
+      "type" : "HIBERNATOR",
+      "status" : "IN_PROGRESS",
+      "weekStartDate" : "2026-06-08",
+      "progress" : 0,
+      "createdAt" : "2026-06-09T17:51:32.674791813Z",
+      "completedAt" : null
+    } ],
+    "lastResetDate" : "2026-06-08",
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}

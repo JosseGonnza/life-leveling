@@ -1,0 +1,63 @@
+{
+  "id" : "d14df740-0bd6-4058-8aa8-0d5be4acc714",
+  "name" : "Cazador Novato",
+  "currentHP" : 100,
+  "rank" : "E",
+  "generalXP" : 0,
+  "gold" : 0,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 1,
+    "xp" : 0
+  }, {
+    "type" : "INTELLECT",
+    "level" : 1,
+    "xp" : 0
+  }, {
+    "type" : "WISDOM",
+    "level" : 1,
+    "xp" : 0
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 1,
+    "xp" : 0
+  }, {
+    "type" : "CHARISMA",
+    "level" : 1,
+    "xp" : 0
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ ],
+  "gatesCompleted" : [ ],
+  "dailyHistory" : [ ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : null,
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 100,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ ],
+    "lastResetDate" : null,
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}

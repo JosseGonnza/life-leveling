@@ -1,0 +1,77 @@
+{
+  "id" : "6ef5d338-deef-4891-b2d7-2ae2ad1e70ea",
+  "name" : "Cazador Quemado",
+  "currentHP" : 0,
+  "rank" : "C",
+  "generalXP" : 27000,
+  "gold" : 10350,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "INTELLECT",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "WISDOM",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "CHARISMA",
+    "level" : 21,
+    "xp" : 205
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ "SURVIVOR", "VETERAN", "EXPERT" ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ {
+    "id" : "ee0282f9-5326-43d6-9305-6ef1524bf263",
+    "name" : "Entregar proyecto",
+    "description" : "Sprint del cliente",
+    "rank" : "C",
+    "deadline" : "2026-06-14",
+    "status" : "PENDING",
+    "createdAt" : "2026-06-09T17:50:30.393987584Z",
+    "completedAt" : null,
+    "failedAt" : null
+  } ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ "LEVEL_20", "LEVEL_10", "LEVEL_30" ],
+  "gatesCompleted" : [ "GATE_E_TO_D", "GATE_D_TO_C" ],
+  "dailyHistory" : [ ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : {
+    "id" : "f10b17c2-a069-44ae-9b51-7e7ac21f3b95",
+    "triggeredAt" : "2026-06-09T17:50:30.394200276Z",
+    "expiresAt" : "2026-06-10T17:50:30.394200276Z"
+  },
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 0,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : true,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ ],
+    "lastResetDate" : null,
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}

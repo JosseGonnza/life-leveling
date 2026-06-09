@@ -1,0 +1,106 @@
+{
+  "id" : "77cab58d-c9e8-4a03-abb7-f84271030a32",
+  "name" : "Cazador Caido",
+  "currentHP" : 100,
+  "rank" : "C",
+  "generalXP" : 27000,
+  "gold" : 11500,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "INTELLECT",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "WISDOM",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 21,
+    "xp" : 205
+  }, {
+    "type" : "CHARISMA",
+    "level" : 21,
+    "xp" : 205
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ "SURVIVOR", "VETERAN", "EXPERT" ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ {
+    "id" : "1a5d6610-a24e-4bde-bf02-20a1e4b84f4e",
+    "name" : "Entregar proyecto",
+    "description" : "Sprint del cliente",
+    "rank" : "C",
+    "deadline" : "2026-06-14",
+    "status" : "PENDING",
+    "createdAt" : "2026-06-09T17:50:30.411501713Z",
+    "completedAt" : null,
+    "failedAt" : null
+  } ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ "LEVEL_20", "LEVEL_10", "LEVEL_30" ],
+  "gatesCompleted" : [ "GATE_E_TO_D", "GATE_D_TO_C" ],
+  "dailyHistory" : [ {
+    "date" : "2026-05-20",
+    "perfectDay" : false,
+    "minHP" : 0,
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "burnout" : true,
+    "debuffsActive" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  }, {
+    "date" : "2026-05-19",
+    "perfectDay" : false,
+    "minHP" : 0,
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "burnout" : true,
+    "debuffsActive" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  }, {
+    "date" : "2026-05-18",
+    "perfectDay" : false,
+    "minHP" : 0,
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "burnout" : true,
+    "debuffsActive" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  } ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : null,
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 100,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ ],
+    "lastResetDate" : null,
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}

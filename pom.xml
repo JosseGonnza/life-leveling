@@ -124,6 +124,17 @@
                 </configuration>
             </plugin>
 
+            <!-- QA: genera las partidas de prueba (mvn -q test-compile exec:java) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>com.lifeleveling.qa.QaFixtures</mainClass>
+                    <classpathScope>test</classpathScope>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

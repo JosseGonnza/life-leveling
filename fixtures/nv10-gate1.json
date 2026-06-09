@@ -1,0 +1,73 @@
+{
+  "id" : "d6b3374e-1899-486c-8dc3-685ce40178f3",
+  "name" : "Cazador Nv10",
+  "currentHP" : 100,
+  "rank" : "E",
+  "generalXP" : 3000,
+  "gold" : 1000,
+  "stats" : [ {
+    "type" : "STRENGTH",
+    "level" : 7,
+    "xp" : 23
+  }, {
+    "type" : "INTELLECT",
+    "level" : 7,
+    "xp" : 23
+  }, {
+    "type" : "WISDOM",
+    "level" : 7,
+    "xp" : 23
+  }, {
+    "type" : "DISCIPLINE",
+    "level" : 7,
+    "xp" : 23
+  }, {
+    "type" : "CHARISMA",
+    "level" : 7,
+    "xp" : 23
+  } ],
+  "inventoryOwned" : [ ],
+  "inventoryEquipped" : { },
+  "titlesUnlocked" : [ "SURVIVOR" ],
+  "titlesEquipped" : [ ],
+  "activeQuests" : [ {
+    "id" : "a1eee8e7-43ab-4392-b2d7-64cf0fe661ac",
+    "name" : "Entregar proyecto",
+    "description" : "Sprint del cliente",
+    "rank" : "C",
+    "deadline" : "2026-06-14",
+    "status" : "PENDING",
+    "createdAt" : "2026-06-09T17:50:30.397368574Z",
+    "completedAt" : null,
+    "failedAt" : null
+  } ],
+  "careerHours" : 0.0,
+  "careerFlowSessions" : 0,
+  "careerSessions" : 0,
+  "milestones" : [ "LEVEL_10" ],
+  "gatesCompleted" : [ ],
+  "dailyHistory" : [ ],
+  "perfectDayStreak" : 0,
+  "maxPerfectDayStreak" : 0,
+  "burnout" : null,
+  "lastActiveDate" : "2026-06-09",
+  "today" : {
+    "pagesRead" : 0,
+    "careerHours" : 0.0,
+    "minHP" : 100,
+    "debuffsActive" : false,
+    "junkConsumed" : false,
+    "perfectDayAchieved" : false,
+    "burnoutOccurred" : false,
+    "consumablesBought" : [ ],
+    "completedQuestIds" : [ ],
+    "completedQuestsCount" : { }
+  },
+  "weekly" : {
+    "quests" : [ ],
+    "lastResetDate" : null,
+    "dailyCompletions" : { },
+    "perfectDaysThisWeek" : 0
+  },
+  "questHistory" : [ ]
+}
