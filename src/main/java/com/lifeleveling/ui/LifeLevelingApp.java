@@ -6,9 +6,14 @@ import com.lifeleveling.infrastructure.time.SystemClock;
 
 import java.nio.file.Path;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
+import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -18,6 +23,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -36,6 +43,7 @@ public final class LifeLevelingApp extends Application {
     private GameFacade facade;
     private Stage stage;
     private BorderPane shell;
+    private StackPane rootStack;
     private double xOffset, yOffset;
 
     private final Nav nav = new Nav() {
@@ -51,10 +59,11 @@ public final class LifeLevelingApp extends Application {
         @Override public void todo(String screen) { System.out.println("⟦SYSTEM⟧ (próximamente) " + screen); }
     };
 
-    /** Pinta la pantalla en el centro y aplica el tema según el estado (gris si Burnout). */
+    /** Pinta la pantalla en el centro, la anima al entrar y aplica el tema según el estado. */
     private void show(Region center) {
         shell.setCenter(center);
         applyBurnoutTheme();
+        UiKit.enter(center);
     }
 
     /** En Burnout solo se permiten Home, Daily (descanso) y Armería (curas). El resto se deniega. */
@@ -65,20 +74,22 @@ public final class LifeLevelingApp extends Application {
         return true;
     }
 
-    /** Tema BURNOUT: desatura toda la interfaz a escala de grises (Biblia 1.5: El Colapso). */
+    /** Tema BURNOUT: desatura toda la interfaz (incluido el fondo vivo) a gris. Biblia 1.5: El Colapso. */
     private void applyBurnoutTheme() {
+        if (rootStack == null) return;
         if (facade.state().burnout()) {
             javafx.scene.effect.ColorAdjust grayscale = new javafx.scene.effect.ColorAdjust();
             grayscale.setSaturation(-1.0);
-            shell.setEffect(grayscale);
+            rootStack.setEffect(grayscale);
         } else {
-            shell.setEffect(null);
+            rootStack.setEffect(null);
         }
     }
 
     @Override
     public void start(Stage stage) {
         this.stage = stage;
+        Fonts.load();
         facade = new GameFacade(new JsonPlayerRepository(savePath()), new SystemClock(),
                 e -> System.out.println("⟦SYSTEM⟧ " + e.message()));
 
@@ -92,17 +103,22 @@ public final class LifeLevelingApp extends Application {
         shell = new BorderPane();
         shell.getStyleClass().add("app-root");
         shell.setTop(titleBar());
+
+        // El fondo vivo va detrás; el shell (transparente) flota encima.
+        rootStack = new StackPane(new AmbientBackground(), shell);
+
         if (hasGame) {
             applyHpOverride();
             nav.home();
         } else {
             shell.setCenter(NewGameScreen.build(facade, nav));
+            UiKit.enter((Region) shell.getCenter());
         }
 
         javafx.geometry.Rectangle2D screen = javafx.stage.Screen.getPrimary().getVisualBounds();
         double w = Math.max(940, screen.getWidth() * 0.75);
         double h = Math.max(580, screen.getHeight() * 0.75);
-        Scene scene = new Scene(shell, w, h);
+        Scene scene = new Scene(rootStack, w, h);
         scene.setFill(Color.web("#050A14"));
         scene.getStylesheets().add(
                 getClass().getResource("/com/lifeleveling/ui/system.css").toExternalForm());
@@ -113,7 +129,44 @@ public final class LifeLevelingApp extends Application {
         stage.show();
         stage.centerOnScreen();
         applyScreenOverride();
+        maybeSplash();
         maybeScreenshot();
+    }
+
+    /** Splash de arranque: la marca despierta con un pulso y se desvanece para revelar el juego.
+     *  Se salta en modo captura/QA (LL_SCREENSHOT/LL_SCREEN) para no contaminar las pantallas. */
+    private void maybeSplash() {
+        if (System.getenv("LL_SCREENSHOT") != null || System.getenv("LL_SCREEN") != null) return;
+
+        Label brand = new Label("⟦ LIFE LEVELING ⟧");
+        brand.getStyleClass().add("splash-brand");
+        Label sub = new Label("DESPERTANDO AL CAZADOR…");
+        sub.getStyleClass().add("splash-sub");
+        VBox box = new VBox(20, brand, sub);
+        box.setAlignment(Pos.CENTER);
+
+        StackPane overlay = new StackPane(box);
+        overlay.getStyleClass().add("splash-root");
+        rootStack.getChildren().add(overlay);
+
+        UiKit.breathe(brand, Color.web("#00FFFF"), 24, 50);
+        brand.setScaleX(0.82);
+        brand.setScaleY(0.82);
+        ScaleTransition pop = new ScaleTransition(Duration.millis(750), brand);
+        pop.setToX(1.0);
+        pop.setToY(1.0);
+        pop.setInterpolator(Interpolator.SPLINE(0.1, 0.7, 0.1, 1));
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(520), box);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+        new ParallelTransition(pop, fadeIn).play();
+
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(600), overlay);
+        fadeOut.setFromValue(1);
+        fadeOut.setToValue(0);
+        fadeOut.setDelay(Duration.millis(1600));
+        fadeOut.setOnFinished(e -> rootStack.getChildren().remove(overlay));
+        fadeOut.play();
     }
 
     /** Hook de dev: si LL_HP=n, baja el HP del jugador al arrancar (para revisar el gating por estado). */
@@ -146,6 +199,7 @@ public final class LifeLevelingApp extends Application {
     private Region titleBar() {
         Label title = new Label("⟦ LIFE LEVELING · SYSTEM ⟧");
         title.getStyleClass().add("sys-title");
+        UiKit.breathe(title, Color.web("#00FFFF"), 6, 16);
         Button close = new Button("✕");
         close.getStyleClass().add("close-btn");
         close.setOnAction(e -> stage.close());

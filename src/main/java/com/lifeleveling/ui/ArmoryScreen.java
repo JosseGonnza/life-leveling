@@ -15,15 +15,19 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.util.function.Consumer;
+
 /**
  * Pantalla The Armory (mockup 4.inventory): tienda + inventario en una, con toggle SHOP ⇄ INVENTORY.
- * SHOP: catálogo (`shopCatalog()`), comprar. INVENTORY: loadout por slot + mochila, equipar/consumir.
- * El cambio de modo y las acciones repintan el centro manteniendo el modo (sin salir de la pantalla).
+ * SHOP: catálogo (`shopCatalog()`) en grid + panel de detalle a la derecha (clic en ítem → qué hace).
+ * INVENTORY: loadout por slot + mochila, equipar/consumir.
  */
 final class ArmoryScreen {
 
     static Region build(GameFacade facade, Nav nav) {
         VBox content = new VBox(12);
+        VBox.setVgrow(content, Priority.ALWAYS);
+        content.setFillWidth(true);
 
         Button shopBtn = new Button("TIENDA");
         Button invBtn = new Button("INVENTARIO");
@@ -31,13 +35,17 @@ final class ArmoryScreen {
         Runnable showShop = new Runnable() {
             @Override public void run() {
                 activate(shopBtn, invBtn);
-                content.getChildren().setAll(shopPane(facade, this));
+                Region pane = shopPane(facade, this);
+                VBox.setVgrow(pane, Priority.ALWAYS);
+                content.getChildren().setAll(pane);
             }
         };
         Runnable showInv = new Runnable() {
             @Override public void run() {
                 activate(invBtn, shopBtn);
-                content.getChildren().setAll(inventoryPane(facade, this));
+                Region pane = inventoryPane(facade, this);
+                VBox.setVgrow(pane, Priority.ALWAYS);
+                content.getChildren().setAll(pane);
             }
         };
         shopBtn.setOnAction(e -> showShop.run());
@@ -49,48 +57,96 @@ final class ArmoryScreen {
         HBox header = new HBox(16, title, UiKit.hgrow(), toggle);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        ScrollPane scroll = new ScrollPane(content);
-        scroll.getStyleClass().add("scroll-pane");
-        scroll.setFitToWidth(true);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-
         if ("inv".equals(System.getenv("LL_ARMORY_MODE"))) showInv.run(); else showShop.run();
 
-        VBox root = new VBox(12, header, scroll, backBar(nav));
+        VBox root = new VBox(12, header, content, backBar(nav));
         root.getStyleClass().add("screen");
         return root;
     }
 
-    // ---- Modo SHOP (agrupado por categoría) ----
+    // ---- Modo SHOP (grid agrupado por categoría + panel de detalle) ----
     private static Region shopPane(GameFacade facade, Runnable refresh) {
         boolean burnout = facade.state().burnout();
-        VBox pane = new VBox(14, UiKit.muted("🪙 " + UiKit.num(facade.state().gold()) + " G disponible"));
 
+        VBox grid = new VBox(14, UiKit.muted("🪙 " + UiKit.num(facade.state().gold()) + " G disponible"));
         if (burnout) {
             Label note = new Label("💔 BURNOUT: la tienda solo despacha curas y la vía de salida rápida.");
             note.setWrapText(true);
             note.getStyleClass().add("burnout-banner-text");
             VBox banner = new VBox(note);
             banner.getStyleClass().add("burnout-banner");
-            pane.getChildren().add(banner);
+            grid.getChildren().add(banner);
         }
+
+        VBox detail = new VBox(10);
+        detail.getStyleClass().add("panel");
+        detail.setPrefWidth(320);
+        detail.setMinWidth(320);
+        Consumer<ShopItemView> select = item -> fillDetail(detail, item, facade, refresh);
 
         java.util.Map<String, java.util.List<ShopItemView>> byCategory = new java.util.LinkedHashMap<>();
         for (ShopItemView item : facade.shopCatalog()) {
             if (burnout && !item.burnoutSafe()) continue;
             byCategory.computeIfAbsent(item.category(), k -> new java.util.ArrayList<>()).add(item);
         }
+        ShopItemView first = null;
         for (var entry : byCategory.entrySet()) {
-            FlowPane grid = new FlowPane(12, 12);
+            FlowPane row = new FlowPane(12, 12);
             for (ShopItemView item : entry.getValue()) {
-                grid.getChildren().add(shopCard(item, facade, refresh));
+                if (first == null) first = item;
+                row.getChildren().add(shopCard(item, facade, refresh, select));
             }
-            pane.getChildren().addAll(UiKit.sectionTitle(entry.getKey()), grid);
+            grid.getChildren().addAll(UiKit.sectionTitle(entry.getKey()), row);
         }
+
+        if (first != null) select.accept(first);
+        else detail.getChildren().add(UiKit.muted("No hay ítems disponibles."));
+
+        ScrollPane scroll = new ScrollPane(grid);
+        scroll.getStyleClass().add("scroll-pane");
+        scroll.setFitToWidth(true);
+        HBox.setHgrow(scroll, Priority.ALWAYS);
+
+        HBox pane = new HBox(16, scroll, detail);
         return pane;
     }
 
-    private static Region shopCard(ShopItemView item, GameFacade facade, Runnable refresh) {
+    private static void fillDetail(VBox detail, ShopItemView item, GameFacade facade, Runnable refresh) {
+        Label name = new Label(item.name());
+        name.getStyleClass().add("player-name");
+        name.setWrapText(true);
+        Label cat = UiKit.caption(item.category().toUpperCase(UiKit.ES)
+                + (item.slot().equals("—") ? "" : "  ·  " + item.slot()));
+
+        Label effect = new Label(item.effect());
+        effect.getStyleClass().add("reward-hint");
+        effect.setWrapText(true);
+
+        Label desc = UiKit.muted(item.description());
+        desc.setWrapText(true);
+
+        Label price = new Label("🪙 " + UiKit.num(item.price()) + " G");
+        price.getStyleClass().add("price");
+
+        Button buy = new Button(item.unlocked() ? "Comprar" : "🔒 Requiere nivel " + item.requiredLevel());
+        buy.getStyleClass().add("continue-btn");
+        buy.setMaxWidth(Double.MAX_VALUE);
+        buy.setDisable(!item.unlocked() || !item.affordable());
+        if (item.unlocked()) {
+            buy.setOnAction(e -> { facade.buy(item.id()); refresh.run(); });
+            if (!item.affordable()) buy.setText("Sin oro suficiente");
+        }
+
+        detail.getChildren().setAll(
+                UiKit.sectionTitle("DETALLE"),
+                name, cat,
+                UiKit.spacer(4), effect,
+                UiKit.spacer(2), desc,
+                UiKit.spacer(6), price, buy);
+    }
+
+    private static Region shopCard(ShopItemView item, GameFacade facade, Runnable refresh,
+                                   Consumer<ShopItemView> select) {
         Label name = new Label(item.name());
         name.getStyleClass().add("item-name");
         name.setWrapText(true);
@@ -110,6 +166,7 @@ final class ArmoryScreen {
 
         VBox card = new VBox(4, name, effect, UiKit.spacer(2), price, buy);
         card.getStyleClass().add(item.unlocked() && item.affordable() ? "shop-card" : "shop-card-locked");
+        card.setOnMouseClicked(e -> select.accept(item));
         return card;
     }
 
@@ -130,10 +187,14 @@ final class ArmoryScreen {
             bag.getChildren().add(ownedRow(item, facade, refresh));
         }
 
-        return new VBox(10,
+        VBox pane = new VBox(10,
                 UiKit.sectionTitle("EQUIPO"), slots,
                 UiKit.spacer(6),
                 UiKit.sectionTitle("MOCHILA"), bag);
+        ScrollPane scroll = new ScrollPane(pane);
+        scroll.getStyleClass().add("scroll-pane");
+        scroll.setFitToWidth(true);
+        return scroll;
     }
 
     private static Region slotChip(InventoryView.SlotView s) {

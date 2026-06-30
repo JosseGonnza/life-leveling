@@ -1,182 +1,239 @@
-/* SYSTEM UI v1.0 — Cyber-Gothic (Solo Leveling). Paleta en DISEÑO_UI.md §3 */
+/* SYSTEM UI v2.0 — Cyber-Gothic VIVO (Solo Leveling). Paleta en DISEÑO_UI.md §3
+   v2.0: fuentes reales (Orbitron/Rajdhani), glassmorphism, glows pulsantes, hovers. */
 
 /* ---- Variables globales de color (looked-up colors, cascadean a toda la escena) ---- */
 .root {
     SYSTEM_BLUE: #00FFFF;
+    SYSTEM_BLUE_SOFT: #4be8ff;
+    SYSTEM_VIOLET: #7A5CFF;
     VOID:        #050A14;
-    PANEL_BG:    rgba(8, 18, 32, 0.55);
-    PANEL_BORDER:#123247;
-    DANGER:      #FF0033;
+    PANEL_BG:    rgba(10, 22, 40, 0.42);
+    PANEL_BG_HI: rgba(16, 34, 58, 0.55);
+    PANEL_BORDER:rgba(0, 255, 255, 0.18);
+    DANGER:      #FF2B4E;
     GOLD_COLOR:  #FFD700;
-    TEXT_MUTED:  #9FB3C8;
-    TEXT_DIM:    #6F8BA3;
+    TEXT_MUTED:  #AFC4D8;
+    TEXT_DIM:    #7E99B3;
     LINE:        #11324A;
-    FIELD_BG:    #0C1A2A;
-    FIELD_BORDER:#16364C;
+    FIELD_BG:    rgba(8, 18, 30, 0.85);
+    FIELD_BORDER:#1c4361;
+
+    DISPLAY: "Orbitron Black";
+    DISPLAY_BOLD: "Orbitron";
+    BODY: "Rajdhani Medium";
+    BODY_REG: "Rajdhani";
 }
 
+/* La capa de fondo vivo va detrás; el shell es transparente para dejarla ver. */
 .app-root {
-    -fx-background-color: linear-gradient(to bottom right, VOID, #08111F 60%, #0A1626);
-    -fx-border-color: SYSTEM_BLUE;
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(0,255,255,0.35);
     -fx-border-width: 1;
 }
 
 /* ---- Barra de título propia ---- */
 .title-bar {
-    -fx-background-color: #060D1A;
-    -fx-padding: 8 12 8 14;
+    -fx-background-color: linear-gradient(to right, rgba(6,13,26,0.95), rgba(8,20,36,0.85));
+    -fx-padding: 9 12 9 16;
     -fx-alignment: center-left;
-    -fx-border-color: transparent transparent LINE transparent;
+    -fx-border-color: transparent transparent rgba(0,255,255,0.22) transparent;
     -fx-border-width: 0 0 1 0;
 }
 .sys-title {
     -fx-text-fill: SYSTEM_BLUE;
-    -fx-font-family: "monospace";
+    -fx-font-family: DISPLAY;
     -fx-font-size: 13;
-    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.5), 8, 0.3, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.85), 14, 0.55, 0, 0);
 }
 .close-btn {
     -fx-background-color: transparent;
     -fx-text-fill: TEXT_DIM;
-    -fx-font-size: 13;
+    -fx-font-family: BODY;
+    -fx-font-size: 15;
     -fx-cursor: hand;
     -fx-padding: 2 8 2 8;
 }
-.close-btn:hover { -fx-text-fill: DANGER; }
+.close-btn:hover { -fx-text-fill: DANGER; -fx-effect: dropshadow(gaussian, rgba(255,43,78,0.8), 12, 0.5, 0, 0); }
 
 /* ---- Layout general ---- */
-.home, .screen { -fx-padding: 18; -fx-spacing: 14; }
+.home, .screen { -fx-padding: 20; -fx-spacing: 14; }
 .columns { -fx-padding: 4 0 4 0; }
 
+/* ---- Glass panel ---- */
 .panel {
     -fx-background-color: PANEL_BG;
     -fx-border-color: PANEL_BORDER;
     -fx-border-width: 1;
-    -fx-background-radius: 2;
-    -fx-border-radius: 2;
-    -fx-padding: 16;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 22, 0.18, 0, 8);
 }
 
 /* ---- Tipografía ---- */
-.player-name { -fx-text-fill: white; -fx-font-size: 20; -fx-font-weight: bold; }
-.rank-badge  { -fx-text-fill: SYSTEM_BLUE; -fx-font-family: "monospace"; -fx-font-size: 12; }
-.section-title, .caption {
-    -fx-text-fill: TEXT_DIM; -fx-font-family: "monospace"; -fx-font-size: 11;
+.player-name {
+    -fx-text-fill: white; -fx-font-family: DISPLAY; -fx-font-size: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.35), 12, 0.3, 0, 0);
 }
-.muted { -fx-text-fill: TEXT_MUTED; -fx-font-family: "monospace"; -fx-font-size: 12; }
+.rank-badge  { -fx-text-fill: SYSTEM_BLUE; -fx-font-family: BODY; -fx-font-size: 13; }
+.section-title, .caption {
+    -fx-text-fill: TEXT_DIM; -fx-font-family: DISPLAY_BOLD; -fx-font-weight: bold; -fx-font-size: 11;
+}
+.muted { -fx-text-fill: TEXT_MUTED; -fx-font-family: BODY; -fx-font-size: 13; }
 
 .big-level {
-    -fx-text-fill: white; -fx-font-size: 52; -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.6), 14, 0.4, 0, 0);
+    -fx-text-fill: white; -fx-font-family: DISPLAY; -fx-font-size: 60;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.85), 26, 0.55, 0, 0);
 }
 .screen-title {
-    -fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.4), 10, 0.3, 0, 0);
+    -fx-text-fill: white; -fx-font-family: DISPLAY; -fx-font-size: 22;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.6), 16, 0.4, 0, 0);
 }
 
 /* ---- Barras (HP / XP) ---- */
 .bar-track {
-    -fx-background-color: FIELD_BG;
+    -fx-background-color: rgba(6,14,24,0.8);
     -fx-border-color: FIELD_BORDER; -fx-border-width: 1;
-    -fx-background-radius: 2; -fx-border-radius: 2;
+    -fx-background-radius: 6; -fx-border-radius: 6;
 }
-.bar-xp  { -fx-background-color: linear-gradient(to right, #0088AA, SYSTEM_BLUE); -fx-background-radius: 2; }
-.bar-hp  { -fx-background-color: linear-gradient(to right, #0aa0c0, #4be0ff); -fx-background-radius: 2; }
+.bar-xp  {
+    -fx-background-color: linear-gradient(to right, #0088AA, SYSTEM_BLUE, SYSTEM_BLUE_SOFT);
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.7), 12, 0.4, 0, 0);
+}
+.bar-hp  {
+    -fx-background-color: linear-gradient(to right, #0aa0c0, #4be0ff);
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(75,224,255,0.55), 10, 0.35, 0, 0);
+}
 .bar-hp-tired {
-    -fx-background-color: linear-gradient(to right, #C98A00, #FFC34D); -fx-background-radius: 2;
-    -fx-effect: dropshadow(gaussian, rgba(255,180,40,0.5), 7, 0.35, 0, 0);
+    -fx-background-color: linear-gradient(to right, #C98A00, #FFC34D); -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(255,180,40,0.6), 11, 0.4, 0, 0);
 }
 .bar-hp-critical {
-    -fx-background-color: linear-gradient(to right, #AA0022, DANGER); -fx-background-radius: 2;
-    -fx-effect: dropshadow(gaussian, rgba(255,0,51,0.6), 8, 0.4, 0, 0);
+    -fx-background-color: linear-gradient(to right, #AA0022, DANGER); -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(255,43,78,0.75), 13, 0.45, 0, 0);
 }
 
 /* ---- Debuff slots ---- */
 .debuff-slot {
-    -fx-min-width: 24; -fx-min-height: 24; -fx-max-width: 24; -fx-max-height: 24;
-    -fx-background-color: #0A1726; -fx-border-color: FIELD_BORDER; -fx-border-width: 1; -fx-border-radius: 2;
+    -fx-min-width: 26; -fx-min-height: 26; -fx-max-width: 26; -fx-max-height: 26;
+    -fx-background-color: rgba(10,23,38,0.6); -fx-border-color: FIELD_BORDER; -fx-border-width: 1; -fx-border-radius: 4;
 }
 
 /* ---- Filas de hábitos ---- */
 .habit-row {
-    -fx-padding: 8 10 8 10;
-    -fx-background-color: rgba(10,23,38,0.6);
-    -fx-border-color: #11293B; -fx-border-width: 1; -fx-border-radius: 2;
+    -fx-padding: 9 11 9 11;
+    -fx-background-color: rgba(10,23,38,0.45);
+    -fx-border-color: rgba(0,255,255,0.10); -fx-border-width: 1; -fx-border-radius: 6;
 }
-.habit-done    { -fx-text-fill: white; -fx-font-size: 13; }
-.habit-pending { -fx-text-fill: #5C7488; -fx-font-size: 13; }
-.check-done    { -fx-text-fill: SYSTEM_BLUE; -fx-font-size: 14; -fx-font-weight: bold; }
-.check-pending { -fx-text-fill: #3A4F63; -fx-font-size: 14; }
+.habit-row:hover { -fx-background-color: rgba(0,255,255,0.08); -fx-border-color: rgba(0,255,255,0.3); }
+.habit-done    { -fx-text-fill: white; -fx-font-family: BODY; -fx-font-size: 14; }
+.habit-pending { -fx-text-fill: #5C7488; -fx-font-family: BODY; -fx-font-size: 14; }
+.check-done    { -fx-text-fill: SYSTEM_BLUE; -fx-font-size: 15; -fx-font-weight: bold;
+                 -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.8), 8, 0.5, 0, 0); }
+.check-pending { -fx-text-fill: #3A4F63; -fx-font-size: 15; }
 
 /* ---- Inputs (Daily Tasks) ---- */
 .sys-field {
     -fx-background-color: FIELD_BG; -fx-text-fill: white;
     -fx-border-color: FIELD_BORDER; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2;
-    -fx-font-family: "monospace"; -fx-padding: 4 8 4 8;
+    -fx-border-radius: 4; -fx-background-radius: 4;
+    -fx-font-family: BODY; -fx-padding: 5 9 5 9;
 }
-.sys-field:focused { -fx-border-color: SYSTEM_BLUE; }
-.sys-check .text { -fx-fill: TEXT_MUTED; -fx-font-family: "monospace"; }
-.reward-hint { -fx-text-fill: SYSTEM_BLUE; -fx-font-family: "monospace"; -fx-font-size: 11; }
+.sys-field:focused {
+    -fx-border-color: SYSTEM_BLUE;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.5), 10, 0.4, 0, 0);
+}
+.sys-check .text { -fx-fill: TEXT_MUTED; -fx-font-family: BODY; }
+.reward-hint { -fx-text-fill: SYSTEM_BLUE; -fx-font-family: BODY; -fx-font-size: 12; }
 
 /* ---- Botones ---- */
 .nav-btn {
-    -fx-background-color: transparent;
-    -fx-text-fill: TEXT_MUTED; -fx-font-family: "monospace"; -fx-font-size: 12;
-    -fx-border-color: #1B3950; -fx-border-width: 1; -fx-border-radius: 2;
-    -fx-padding: 6 14 6 14; -fx-cursor: hand;
+    -fx-background-color: rgba(0,255,255,0.03);
+    -fx-text-fill: TEXT_MUTED; -fx-font-family: BODY; -fx-font-size: 13;
+    -fx-border-color: rgba(0,255,255,0.20); -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;
+    -fx-padding: 7 16 7 16; -fx-cursor: hand;
 }
-.nav-btn:hover { -fx-text-fill: SYSTEM_BLUE; -fx-border-color: SYSTEM_BLUE; }
+.nav-btn:hover {
+    -fx-text-fill: SYSTEM_BLUE; -fx-border-color: SYSTEM_BLUE;
+    -fx-background-color: rgba(0,255,255,0.12);
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.65), 14, 0.45, 0, 0);
+}
+.nav-btn:pressed { -fx-background-color: rgba(0,255,255,0.22); }
+
 .continue-btn {
-    -fx-background-color: rgba(0,255,255,0.08);
-    -fx-text-fill: SYSTEM_BLUE; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-font-weight: bold;
-    -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1; -fx-border-radius: 2;
-    -fx-padding: 8 26 8 26; -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.4), 10, 0.3, 0, 0);
+    -fx-background-color: linear-gradient(to bottom, rgba(0,255,255,0.18), rgba(0,255,255,0.06));
+    -fx-text-fill: SYSTEM_BLUE; -fx-font-family: DISPLAY_BOLD; -fx-font-weight: bold; -fx-font-size: 13;
+    -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;
+    -fx-padding: 9 28 9 28; -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.55), 16, 0.4, 0, 0);
 }
-.continue-btn:hover { -fx-background-color: rgba(0,255,255,0.18); }
-.gold { -fx-text-fill: GOLD_COLOR; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-padding: 0 4 0 10; }
+.continue-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(0,255,255,0.32), rgba(0,255,255,0.12));
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.9), 22, 0.6, 0, 0);
+}
+.continue-btn:pressed { -fx-background-color: rgba(0,255,255,0.4); }
+.gold { -fx-text-fill: GOLD_COLOR; -fx-font-family: BODY; -fx-font-size: 14; -fx-padding: 0 4 0 10;
+        -fx-effect: dropshadow(gaussian, rgba(255,215,0,0.45), 10, 0.3, 0, 0); }
 
 /* ---- The Armory ---- */
 .shop-card {
     -fx-background-color: PANEL_BG; -fx-border-color: PANEL_BORDER; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12; -fx-min-width: 190; -fx-max-width: 190;
+    -fx-border-radius: 7; -fx-background-radius: 7; -fx-padding: 13; -fx-min-width: 190; -fx-max-width: 190;
+    -fx-cursor: hand;
 }
+.shop-card:hover { -fx-border-color: SYSTEM_BLUE; -fx-background-color: PANEL_BG_HI;
+                   -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.4), 16, 0.35, 0, 4); }
 .shop-card-locked {
-    -fx-background-color: rgba(40,12,18,0.35); -fx-border-color: #5A2230; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12; -fx-min-width: 190; -fx-max-width: 190; -fx-opacity: 0.7;
+    -fx-background-color: rgba(40,12,18,0.3); -fx-border-color: #5A2230; -fx-border-width: 1;
+    -fx-border-radius: 7; -fx-background-radius: 7; -fx-padding: 13; -fx-min-width: 190; -fx-max-width: 190; -fx-opacity: 0.7;
 }
 .slot-chip {
-    -fx-background-color: #0A1726; -fx-border-color: FIELD_BORDER; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 8; -fx-alignment: center; -fx-min-width: 92;
+    -fx-background-color: rgba(10,23,38,0.7); -fx-border-color: FIELD_BORDER; -fx-border-width: 1;
+    -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 9; -fx-alignment: center; -fx-min-width: 92;
 }
-.slot-chip-filled { -fx-border-color: SYSTEM_BLUE; }
-.item-name { -fx-text-fill: white; -fx-font-size: 13; -fx-font-weight: bold; }
-.price { -fx-text-fill: GOLD_COLOR; -fx-font-family: "monospace"; -fx-font-size: 12; }
+.slot-chip-filled { -fx-border-color: SYSTEM_BLUE;
+                    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.4), 10, 0.3, 0, 0); }
+.item-name { -fx-text-fill: white; -fx-font-family: BODY; -fx-font-size: 14; }
+.price { -fx-text-fill: GOLD_COLOR; -fx-font-family: BODY; -fx-font-size: 13; }
 .scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 
 /* ---- Hall of Fame ---- */
 .title-chip {
     -fx-background-color: PANEL_BG; -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 10; -fx-min-width: 150; -fx-max-width: 150; -fx-cursor: hand;
+    -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 11; -fx-min-width: 150; -fx-max-width: 150; -fx-cursor: hand;
 }
+.title-chip:hover { -fx-background-color: rgba(0,255,255,0.1);
+                    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.5), 14, 0.4, 0, 0); }
 .title-chip-locked {
-    -fx-background-color: #0A1726; -fx-border-color: #2A3B4D; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 10; -fx-min-width: 150; -fx-max-width: 150; -fx-opacity: 0.55; -fx-cursor: hand;
+    -fx-background-color: rgba(10,23,38,0.6); -fx-border-color: #2A3B4D; -fx-border-width: 1;
+    -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 11; -fx-min-width: 150; -fx-max-width: 150; -fx-opacity: 0.55; -fx-cursor: hand;
 }
 .seal-card {
     -fx-background-color: rgba(0,255,255,0.06); -fx-border-color: SYSTEM_BLUE; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 12;
+    -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 13;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.3), 14, 0.3, 0, 0);
 }
 
 /* ---- Burnout (Lockdown / El Colapso) ---- */
 .burnout-banner {
     -fx-background-color: rgba(40, 40, 44, 0.85);
     -fx-border-color: DANGER; -fx-border-width: 1;
-    -fx-border-radius: 2; -fx-background-radius: 2;
-    -fx-padding: 10 14 10 14;
+    -fx-border-radius: 6; -fx-background-radius: 6;
+    -fx-padding: 11 15 11 15;
 }
-.burnout-banner-title { -fx-text-fill: DANGER; -fx-font-family: "monospace"; -fx-font-size: 13; -fx-font-weight: bold; }
-.burnout-banner-text  { -fx-text-fill: #C7C7CC; -fx-font-family: "monospace"; -fx-font-size: 11; }
-.habit-locked { -fx-text-fill: #6F6F76; }
-.lock-note    { -fx-text-fill: #6F6F76; -fx-font-family: "monospace"; -fx-font-size: 11; }
+.burnout-banner-title { -fx-text-fill: DANGER; -fx-font-family: DISPLAY_BOLD; -fx-font-weight: bold; -fx-font-size: 13; }
+.burnout-banner-text  { -fx-text-fill: #C7C7CC; -fx-font-family: BODY; -fx-font-size: 12; }
+.habit-locked { -fx-text-fill: #6F6F76; -fx-font-family: BODY; }
+.lock-note    { -fx-text-fill: #6F6F76; -fx-font-family: BODY; -fx-font-size: 12; }
+
+/* ---- Splash de arranque ---- */
+.splash-root { -fx-background-color: radial-gradient(center 50% 45%, radius 75%, #0A1A2E, VOID 80%); }
+.splash-brand {
+    -fx-text-fill: SYSTEM_BLUE; -fx-font-family: DISPLAY; -fx-font-size: 46;
+    -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.9), 38, 0.6, 0, 0);
+}
+.splash-sub {
+    -fx-text-fill: TEXT_MUTED; -fx-font-family: BODY; -fx-font-size: 15;
+}

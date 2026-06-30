@@ -324,7 +324,7 @@ public class GateTracker {
     public int getTotalPagesRead() {
         return history.values().stream()
                 .mapToInt(DailyHistory::pagesRead)
-                .sum();
+                .sum() + todayPagesRead;
     }
 
     /**

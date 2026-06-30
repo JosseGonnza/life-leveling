@@ -75,6 +75,7 @@ final class HomeScreen {
     private static Region levelColumn(PlayerView p) {
         Label lvl = new Label(String.valueOf(p.level()));
         lvl.getStyleClass().add("big-level");
+        UiKit.breathe(lvl, javafx.scene.paint.Color.web("#00FFFF"), 16, 34);
 
         double xpPct = p.xpForLevelSpan() == 0 ? 1.0 : (double) p.xpIntoLevel() / p.xpForLevelSpan();
         Region xp = UiKit.bar(xpPct, "bar-xp", 210);
@@ -121,6 +122,7 @@ final class HomeScreen {
         Button cont = new Button("REGISTRAR HÁBITOS  ▸");
         cont.getStyleClass().add("continue-btn");
         cont.setOnAction(e -> nav.daily());
+        UiKit.hoverPop(cont, 1.06);
 
         HBox right = new HBox(10,
                 locked(UiKit.navButton("Juicios", nav::judgments), burnout),
