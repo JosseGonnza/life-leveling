@@ -228,6 +228,37 @@
 .habit-locked { -fx-text-fill: #6F6F76; -fx-font-family: BODY; }
 .lock-note    { -fx-text-fill: #6F6F76; -fx-font-family: BODY; -fx-font-size: 12; }
 
+/* ---- Notificaciones (toasts) ---- */
+.toast {
+    -fx-background-color: rgba(8, 18, 32, 0.92);
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 12 16 12 10;
+    -fx-min-width: 240;
+    -fx-pref-width: 320;
+}
+.toast-text { -fx-text-fill: white; -fx-font-family: BODY; -fx-font-size: 14; }
+.toast-accent { -fx-background-radius: 4; }
+
+.toast-good { -fx-border-color: rgba(0,255,255,0.55);
+              -fx-effect: dropshadow(gaussian, rgba(0,255,255,0.45), 20, 0.3, 0, 4); }
+.toast-good .toast-accent { -fx-background-color: SYSTEM_BLUE; }
+
+.toast-hero { -fx-border-color: GOLD_COLOR;
+              -fx-effect: dropshadow(gaussian, rgba(255,215,0,0.6), 26, 0.45, 0, 5); }
+.toast-hero .toast-accent { -fx-background-color: GOLD_COLOR; }
+.toast-hero .toast-text { -fx-font-family: BODY_REG; -fx-font-weight: bold; -fx-font-size: 15;
+                          -fx-effect: dropshadow(gaussian, rgba(255,215,0,0.5), 10, 0.3, 0, 0); }
+
+.toast-bad { -fx-border-color: DANGER;
+             -fx-effect: dropshadow(gaussian, rgba(255,43,78,0.55), 22, 0.35, 0, 4); }
+.toast-bad .toast-accent { -fx-background-color: DANGER; }
+
+.toast-info { -fx-border-color: rgba(159,179,200,0.4);
+              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 16, 0.2, 0, 4); }
+.toast-info .toast-accent { -fx-background-color: TEXT_MUTED; }
+
 /* ---- Splash de arranque ---- */
 .splash-root { -fx-background-color: radial-gradient(center 50% 45%, radius 75%, #0A1A2E, VOID 80%); }
 .splash-brand {

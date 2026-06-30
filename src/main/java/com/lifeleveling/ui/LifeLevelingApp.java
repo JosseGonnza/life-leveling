@@ -44,6 +44,7 @@ public final class LifeLevelingApp extends Application {
     private Stage stage;
     private BorderPane shell;
     private StackPane rootStack;
+    private ToastLayer toasts;
     private double xOffset, yOffset;
 
     private final Nav nav = new Nav() {
@@ -90,8 +91,10 @@ public final class LifeLevelingApp extends Application {
     public void start(Stage stage) {
         this.stage = stage;
         Fonts.load();
+        ToastLayer toasts = new ToastLayer();
+        this.toasts = toasts;
         facade = new GameFacade(new JsonPlayerRepository(savePath()), new SystemClock(),
-                e -> System.out.println("⟦SYSTEM⟧ " + e.message()));
+                e -> { System.out.println("⟦SYSTEM⟧ " + e.message()); toasts.push(e); });
 
         boolean hasGame = facade.loadGame();
         // QA: los hooks de dev (LL_SCREEN/LL_HP) necesitan una partida; si no hay save, sembramos una.
@@ -104,8 +107,8 @@ public final class LifeLevelingApp extends Application {
         shell.getStyleClass().add("app-root");
         shell.setTop(titleBar());
 
-        // El fondo vivo va detrás; el shell (transparente) flota encima.
-        rootStack = new StackPane(new AmbientBackground(), shell);
+        // El fondo vivo va detrás; el shell (transparente) flota encima; los toasts, por encima de todo.
+        rootStack = new StackPane(new AmbientBackground(), shell, toasts);
 
         if (hasGame) {
             applyHpOverride();
@@ -130,7 +133,19 @@ public final class LifeLevelingApp extends Application {
         stage.centerOnScreen();
         applyScreenOverride();
         maybeSplash();
+        maybeToastDemo();
         maybeScreenshot();
+    }
+
+    /** Hook de dev: si LL_TOAST=1, siembra notificaciones de muestra (para QA/capturas del overlay). */
+    private void maybeToastDemo() {
+        if (System.getenv("LL_TOAST") == null) return;
+        toasts.push(com.lifeleveling.domain.event.GameEvent.levelUp(54, 55));
+        toasts.push(com.lifeleveling.domain.event.GameEvent.levelUp(55, 56));
+        toasts.push(com.lifeleveling.domain.event.GameEvent.perfectDay());
+        toasts.push(com.lifeleveling.domain.event.GameEvent.questCompleted("Entregar el proyecto"));
+        toasts.push(com.lifeleveling.domain.event.GameEvent.gateCompleted("El Despertar"));
+        toasts.push(com.lifeleveling.domain.event.GameEvent.questFailed("Leer 50 páginas", 15));
     }
 
     /** Splash de arranque: la marca despierta con un pulso y se desvanece para revelar el juego.
@@ -218,7 +233,8 @@ public final class LifeLevelingApp extends Application {
     private void maybeScreenshot() {
         String path = System.getenv("LL_SCREENSHOT");
         if (path == null) return;
-        PauseTransition pause = new PauseTransition(Duration.millis(700));
+        double delay = System.getenv("LL_TOAST") != null ? 1500 : 700;
+        PauseTransition pause = new PauseTransition(Duration.millis(delay));
         pause.setOnFinished(e -> {
             try {
                 WritableImage img = stage.getScene().snapshot(null);
